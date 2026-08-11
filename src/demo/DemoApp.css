@@ -1,0 +1,99 @@
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+
+.demo-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--juneau-color-surface-raised);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.demo-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.demo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  background-color: var(--juneau-color-surface);
+  border-bottom: 1px solid var(--juneau-color-border);
+  flex-shrink: 0;
+}
+
+.demo-title {
+  font-size: var(--juneau-font-size-xl);
+  font-weight: 700;
+  color: var(--juneau-color-text-primary);
+}
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+
+.demo-nav {
+  display: flex;
+  gap: 4px;
+  background: var(--juneau-color-surface-raised);
+  border: 1px solid var(--juneau-color-border);
+  border-radius: var(--juneau-radius-md);
+  padding: 3px;
+}
+
+.demo-nav-btn {
+  padding: 5px 14px;
+  border: none;
+  border-radius: var(--juneau-radius-sm);
+  font-size: var(--juneau-font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: var(--juneau-color-text-muted);
+  transition: background-color var(--juneau-transition-fast), color var(--juneau-transition-fast);
+}
+
+.demo-nav-btn:hover {
+  background: var(--juneau-color-surface-hover);
+  color: var(--juneau-color-text-primary);
+}
+
+.demo-nav-btn--active {
+  background: var(--juneau-color-primary);
+  color: var(--juneau-color-text-inverse);
+}
+
+.demo-nav-btn--active:hover {
+  background: var(--juneau-color-primary-dark);
+  color: var(--juneau-color-text-inverse);
+}
+
+/* ── Toasts ──────────────────────────────────────────────────────────────── */
+
+.demo-toasts {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+}
+
+.demo-toast {
+  padding: 10px 16px;
+  background: var(--juneau-color-text-primary);
+  color: var(--juneau-color-text-inverse);
+  border-radius: var(--juneau-radius-md);
+  font-size: var(--juneau-font-size-base);
+  animation: slideIn 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes slideIn {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}

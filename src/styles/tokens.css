@@ -1,0 +1,78 @@
+/*
+  Juneau design tokens — all visual constants live here.
+  Default theme is inspired by a black + pink palette.
+
+  Consumers can override any token by passing a theme to JuneauProvider,
+  or by setting CSS custom properties on :root before importing this file.
+
+  Example:
+    <JuneauProvider theme={{ colorPrimary: '#6366f1', colorAccent: '#8b5cf6' }}>
+*/
+
+:root {
+  /* ── Brand / primary ────────────────────────────────────────────────────── */
+  --juneau-color-primary:        #000000;
+  --juneau-color-primary-dark:   #252528;
+  --juneau-color-primary-light:  #ECECEC;
+  --juneau-color-primary-border: #E8E8EC;
+
+  /* ── Accent — pink brand moments, proposal confirm actions ──────────────── */
+  --juneau-color-accent:         #FF49A4;
+  --juneau-color-accent-dark:    #FF6BB3;
+  --juneau-color-accent-light:   #FFF0F7;
+  --juneau-color-accent-border:  #FFBDD9;
+
+  /* ── Surfaces ───────────────────────────────────────────────────────────── */
+  --juneau-color-surface:        #FFFFFF;
+  --juneau-color-surface-raised: #F4F4F6;
+  --juneau-color-surface-hover:  #ECECEC;
+
+  /* ── Borders ────────────────────────────────────────────────────────────── */
+  --juneau-color-border:         #E8E8EC;
+  --juneau-color-border-subtle:  #ECECEC;
+
+  /* ── Text ───────────────────────────────────────────────────────────────── */
+  --juneau-color-text-primary:   #000000;
+  --juneau-color-text-secondary: #474747;
+  --juneau-color-text-muted:     #474747;
+  --juneau-color-text-faint:     #9090A0;
+  --juneau-color-text-inverse:   #FFFFFF;
+
+  /* ── Component-specific ─────────────────────────────────────────────────── */
+  --juneau-color-assistant-avatar: #FF49A4;
+
+  /* ── Semantic: error ────────────────────────────────────────────────────── */
+  --juneau-color-error-bg:     #FFF0F7;
+  --juneau-color-error-border: #E6244A;
+  --juneau-color-error-text:   #C41A3B;
+
+  /* ── Semantic: status badges ────────────────────────────────────────────── */
+  --juneau-color-success-bg:   #F4FDE8;
+  --juneau-color-success-text: #3F7528;
+  --juneau-color-warning-bg:   #FFF6E5;
+  --juneau-color-warning-text: #B37400;
+  --juneau-color-danger-bg:    #FFF0F7;
+  --juneau-color-danger-text:  #C41A3B;
+
+  /* ── Radius ─────────────────────────────────────────────────────────────── */
+  --juneau-radius-sm:   6px;
+  --juneau-radius-md:   8px;
+  --juneau-radius-lg:   12px;
+  --juneau-radius-full: 9999px;
+
+  /* ── Typography ─────────────────────────────────────────────────────────── */
+  --juneau-font-size-xs:   11px;
+  --juneau-font-size-sm:   12px;
+  --juneau-font-size-base: 13px;
+  --juneau-font-size-md:   14px;
+  --juneau-font-size-lg:   15px;
+  --juneau-font-size-xl:   16px;
+  --juneau-font-size-2xl:  22px;
+  --juneau-font-size-3xl:  24px;
+
+  /* ── Typography — font family ───────────────────────────────────────────── */
+  --juneau-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* ── Motion ─────────────────────────────────────────────────────────────── */
+  --juneau-transition-fast: 0.15s;
+}

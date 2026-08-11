@@ -1,0 +1,267 @@
+---
+title: Docs/Adapters
+---
+
+# Adapters
+
+An adapter is the bridge between Juneau's UI and your AI backend.
+It implements a single interface and returns a stream of events that
+the `useAiChat` hook processes in real time.
+
+## The interface
+
+```ts
+interface AiBackendAdapter {
+  sendMessage(input: AiAdapterInput): AsyncIterable<AiStreamEvent>;
+}
+
+type AiAdapterInput = {
+  messages: AiMessage[];
+  context?: Record<string, unknown>;
+};
+```
+
+`messages` is the full conversation history — your backend can use it for context.
+`context` is an opaque object passed through from the `AiSidebar` or `useAiChat` caller.
+Use it to forward application state (current page, entity ID, user role, etc.) without
+coupling the library to your domain model.
+
+## Stream events
+
+Your adapter yields events one by one. Juneau processes them as they arrive.
+
+```ts
+type AiStreamEvent =
+  | { type: 'text';  text: string }                                      // Append text chunk
+  | { type: 'part';  part: AiTablePart | AiProposalPart | AiErrorPart } // Append structured block
+  | { type: 'done' }                                                     // Response complete
+  | { type: 'error'; message: string }                                   // Fatal error
+```
+
+A typical response emits several `text` events (streamed word by word), optionally
+one or more `part` events (table, proposal), then a `done` event.
+
+## Built-in mock adapters
+
+### mockAdapter
+
+Keyword-driven mock for the sidebar demo. Picks a scenario based on the last user message.
+
+```tsx
+import { mockAdapter } from 'juneau';
+
+<JuneauProvider>
+  <AiSidebar adapter={mockAdapter} />
+</JuneauProvider>
+```
+
+Scenarios: spend by supplier (Q2/dodavatel keywords), monthly trend, help, and a fallback default.
+
+### dashboardAdapter
+
+Mock for the proactive dashboard demo. Responds to a synthetic `'dashboard-init'` hint
+from `sendGreeting` with an assistant greeting — invoice summary, a table, and a proposal card.
+Subsequent user messages trigger keyword-based scenarios.
+
+```tsx
+import { dashboardAdapter } from 'juneau';
+
+const chat = useAiChat({ adapter: dashboardAdapter });
+useEffect(() => { chat.sendGreeting('dashboard-init'); }, []);
+```
+
+## useAiChat — sending messages
+
+### sendMessage()
+
+Sends the current `input` value as a user message. Clears the input field before streaming.
+
+```tsx
+const { input, setInput, sendMessage } = useAiChat({ adapter });
+// User types, then:
+sendMessage();
+```
+
+### sendMessageWithText(text)
+
+Sends a specific text string as a user message without touching the `input` state.
+Useful for programmatic triggers where you don't want to flash text into the textarea.
+
+```tsx
+const { sendMessageWithText } = useAiChat({ adapter });
+sendMessageWithText('Show me the monthly trend');
+```
+
+### sendGreeting(contextHint)
+
+Triggers the adapter and streams the response as an **assistant-only** message.
+No user bubble is added to the conversation. Use this for proactive greetings or
+page-load summaries where the AI speaks first.
+
+The `contextHint` string is passed to the adapter as a `system` role message so the
+adapter knows what kind of greeting to generate.
+
+```tsx
+const { sendGreeting } = useAiChat({ adapter: dashboardAdapter });
+
+useEffect(() => {
+  sendGreeting('dashboard-init');
+}, []);
+```
+
+The adapter identifies the hint via the `system` message in the incoming `messages` array:
+
+```ts
+// In your adapter:
+const systemMsg = input.messages.find(m => m.role === 'system');
+const hint = systemMsg?.parts[0]?.text; // 'dashboard-init'
+
+if (hint === 'dashboard-init') {
+  yield* greetingScenario();
+}
+```
+
+## Writing a real adapter
+
+### OpenAI (streaming)
+
+```ts
+import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from 'juneau';
+import OpenAI from 'openai';
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export const openAiAdapter: AiBackendAdapter = {
+  async *sendMessage({ messages }: AiAdapterInput): AsyncIterable<AiStreamEvent> {
+    const stream = await client.chat.completions.create({
+      model: 'gpt-4o',
+      stream: true,
+      messages: messages.map(m => ({
+        role: m.role,
+        content: m.parts
+          .filter(p => p.type === 'text')
+          .map(p => (p as { text: string }).text)
+          .join(''),
+      })),
+    });
+
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content;
+      if (text) yield { type: 'text', text };
+    }
+
+    yield { type: 'done' };
+  },
+};
+```
+
+### Custom backend (fetch + SSE)
+
+```ts
+import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from 'juneau';
+
+export const myBackendAdapter: AiBackendAdapter = {
+  async *sendMessage({ messages, context }: AiAdapterInput): AsyncIterable<AiStreamEvent> {
+    const response = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, context }),
+    });
+
+    if (!response.ok || !response.body) {
+      yield { type: 'error', message: 'Request failed' };
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const lines = decoder.decode(value).split('\n').filter(Boolean);
+      for (const line of lines) {
+        const event: AiStreamEvent = JSON.parse(line);
+        yield event;
+        if (event.type === 'done' || event.type === 'error') return;
+      }
+    }
+  },
+};
+```
+
+Your backend is responsible for formatting its response as newline-delimited JSON
+where each line is a valid `AiStreamEvent`.
+
+## Returning structured parts
+
+To include a table or proposal card in a response, yield a `part` event:
+
+```ts
+// Table
+yield {
+  type: 'part',
+  part: {
+    type: 'table',
+    columns: ['Supplier', 'Total'],
+    rows: [
+      { Supplier: 'Acme Corp', Total: '$12,400' },
+      { Supplier: 'Globex',    Total: '$8,200' },
+    ],
+  },
+};
+
+// Proposal card
+yield {
+  type: 'part',
+  part: {
+    type: 'proposal',
+    proposal: {
+      id: 'save-report',
+      title: 'Save as recurring report',
+      description: 'Auto-generate this report every quarter.',
+      confirmLabel: 'Save',
+      cancelLabel: 'Dismiss',
+      payload: { reportId: 'q2-it-spend' }, // returned to onProposalConfirm
+    },
+  },
+};
+```
+
+## Handling proposal confirmation
+
+When the user confirms or cancels a proposal, Juneau calls the corresponding callback:
+
+```tsx
+<AiSidebar
+  adapter={myAdapter}
+  onProposalConfirm={(proposalId, payload) => {
+    console.log('Confirmed:', proposalId, payload);
+  }}
+  onProposalCancel={(proposalId) => {
+    console.log('Cancelled:', proposalId);
+  }}
+/>
+```
+
+Or at the hook level when using `AiChat` directly:
+
+```tsx
+const chat = useAiChat({
+  adapter: myAdapter,
+  onProposalConfirm: (id, payload) => scheduleReport(payload),
+  onProposalCancel: (id) => console.log('dismissed', id),
+});
+```
+
+## Replacing mockAdapter in production
+
+The adapter is just a prop — swap it based on environment:
+
+```ts
+import { mockAdapter } from 'juneau';
+import { myBackendAdapter } from './myBackendAdapter';
+
+const adapter = import.meta.env.DEV ? mockAdapter : myBackendAdapter;
+```

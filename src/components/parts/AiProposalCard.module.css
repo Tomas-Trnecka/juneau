@@ -1,0 +1,72 @@
+.card {
+  background: linear-gradient(135deg, var(--juneau-color-accent-light) 0%, var(--juneau-color-accent-border) 100%);
+  border: 1px solid var(--juneau-color-accent-border);
+  border-radius: var(--juneau-radius-lg);
+  padding: 14px 16px;
+  margin: 8px 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--juneau-color-accent);
+}
+
+.title {
+  font-weight: 600;
+  font-size: var(--juneau-font-size-md);
+  color: var(--juneau-color-accent-dark);
+}
+
+.description {
+  font-size: var(--juneau-font-size-base);
+  color: var(--juneau-color-text-secondary);
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.confirm {
+  padding: 7px 16px;
+  background-color: var(--juneau-color-accent);
+  color: var(--juneau-color-text-inverse);
+  border: none;
+  border-radius: var(--juneau-radius-sm);
+  font-size: var(--juneau-font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--juneau-transition-fast);
+}
+
+.confirm:hover {
+  background-color: var(--juneau-color-accent-dark);
+}
+
+.cancel {
+  padding: 7px 16px;
+  background-color: transparent;
+  color: var(--juneau-color-text-muted);
+  border: 1px solid var(--juneau-color-border);
+  border-radius: var(--juneau-radius-sm);
+  font-size: var(--juneau-font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--juneau-transition-fast), color var(--juneau-transition-fast);
+}
+
+.cancel:hover {
+  background-color: var(--juneau-color-surface-hover);
+  color: var(--juneau-color-text-secondary);
+}

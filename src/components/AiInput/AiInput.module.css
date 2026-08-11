@@ -1,0 +1,124 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--juneau-color-border);
+  background-color: var(--juneau-color-surface);
+  flex-shrink: 0;
+}
+
+/* ── Textarea ─────────────────────────────────────────────────────────────── */
+
+.textarea {
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 12px 14px 6px;
+  font-size: var(--juneau-font-size-md);
+  font-family: inherit;
+  line-height: 1.6;
+  color: var(--juneau-color-text-primary);
+  background-color: var(--juneau-color-surface);
+  width: 100%;
+}
+
+.textarea::placeholder {
+  color: var(--juneau-color-text-faint);
+}
+
+.textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 10px;
+  gap: 8px;
+}
+
+/* ── Quick action buttons ─────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: var(--juneau-radius-sm);
+  background: transparent;
+  color: var(--juneau-color-text-muted);
+  font-size: var(--juneau-font-size-sm);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--juneau-transition-fast), color var(--juneau-transition-fast);
+}
+
+.actionBtn svg {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.actionBtn:hover:not(:disabled) {
+  background: var(--juneau-color-surface-raised);
+  color: var(--juneau-color-text-primary);
+}
+
+.actionBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Send button ──────────────────────────────────────────────────────────── */
+
+.sendBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: var(--juneau-radius-md);
+  background-color: var(--juneau-color-primary);
+  color: var(--juneau-color-text-inverse);
+  font-size: var(--juneau-font-size-base);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color var(--juneau-transition-fast), opacity var(--juneau-transition-fast);
+}
+
+.sendBtn svg {
+  font-size: 12px;
+}
+
+.sendBtn:hover:not(:disabled) {
+  background-color: var(--juneau-color-primary-dark);
+}
+
+.sendBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.spinnerIcon {
+  width: 14px;
+  height: 14px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

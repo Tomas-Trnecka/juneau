@@ -1,0 +1,184 @@
+---
+title: Docs/Getting Started
+---
+
+# Getting Started
+
+Juneau is an open-source React/TypeScript library for embedding AI chat UI into web applications.
+It provides a streaming-ready chat interface, rich message rendering (text, tables, proposal cards),
+and a clean adapter interface so you can connect any AI backend without touching the UI layer.
+
+## Installation
+
+```bash
+npm install juneau
+```
+
+React 18 or 19 is required as a peer dependency.
+
+## Minimal setup
+
+Wrap your app (or the relevant subtree) in `JuneauProvider` and mount `AiSidebar` with an adapter.
+
+```tsx
+import { JuneauProvider, AiSidebar, mockAdapter } from 'juneau';
+
+export function App() {
+  return (
+    <JuneauProvider>
+      <div style={{ display: 'flex', height: '100vh' }}>
+        <main style={{ flex: 1 }}>
+          {/* your app content */}
+        </main>
+        <AiSidebar adapter={mockAdapter} />
+      </div>
+    </JuneauProvider>
+  );
+}
+```
+
+`mockAdapter` simulates streaming AI responses locally — no API key required.
+Replace it with a real adapter when you're ready (see **Adapters**).
+
+## What JuneauProvider does
+
+`JuneauProvider` is required. It provides three things to its subtree:
+
+- **Design tokens** — injects the default CSS custom properties (`--juneau-*`) that all components use for colors, radii, typography, and font family.
+- **Labels context** — supplies translated UI strings to every component. Defaults to English.
+- **Theme scope** — any `theme` overrides are applied as CSS variables scoped to the provider's DOM subtree, so multiple themed instances can coexist on the same page.
+
+Without it, components will render without styles or labels.
+
+## Two layout modes
+
+### AiSidebar — pre-built panel
+
+The quickest way to add a chat panel. Owns its own state internally — just pass an adapter and mount it.
+
+```tsx
+<AiSidebar adapter={myAdapter} />
+```
+
+Renders a fixed-width `<aside>` with a black header (brain icon + title + reset button) on the right edge of your layout.
+
+### AiChat — headless, embed anywhere
+
+Use `AiChat` when you want to embed chat in your own layout — a dashboard card, a modal, a full-page panel — without the sidebar chrome.
+
+`AiChat` is purely presentational: no state, no hooks inside. You call `useAiChat` yourself and pass the results as props.
+
+```tsx
+import { AiChat, useAiChat, mockAdapter } from 'juneau';
+
+function MyDashboard() {
+  const chat = useAiChat({ adapter: mockAdapter });
+
+  return (
+    <div className="my-card">
+      <AiChat
+        messages={chat.messages}
+        input={chat.input}
+        isLoading={chat.isLoading}
+        error={chat.error}
+        onInputChange={chat.setInput}
+        onSend={chat.sendMessage}
+        onProposalConfirm={chat.confirmProposal}
+        onProposalCancel={chat.cancelProposal}
+      />
+    </div>
+  );
+}
+```
+
+`AiSidebar` uses `AiChat` internally — any change to message rendering or streaming behaviour applies to both layouts automatically.
+
+### AiChatHeader — shared header
+
+`AiChatHeader` is the black header with the brain icon, title, and optional reset button. It reads the title from labels automatically (`sidebarTitle`). Both `AiSidebar` and any custom layout that wants a consistent header should use it:
+
+```tsx
+import { AiChatHeader } from 'juneau';
+
+<div className="my-card">
+  <AiChatHeader onReset={chat.reset} />
+  <AiChat ... />
+</div>
+```
+
+## Project structure
+
+```
+src/
+  core/           # Types and stream utilities — framework-agnostic
+  adapters/       # AiBackendAdapter implementations (mockAdapter, dashboardAdapter)
+  hooks/          # useAiChat — state and streaming logic
+  components/
+    AiChat/       # Headless chat body — message list + input + error
+    AiChatHeader/ # Shared header — brain icon, title, reset button
+    AiSidebar/    # AiChatHeader + AiChat in a sidebar wrapper
+    AiMessageList/
+    AiMessageBubble/
+    AiInput/      # Textarea + quick action toolbar + send button
+    AiTypingIndicator/
+    AiError/
+    JuneauProvider/
+    parts/        # AiTablePart, AiProposalCard, AiMessagePartRenderer
+  i18n/           # JuneauLabels type, locales (en, cs)
+  styles/         # tokens.css — single source of truth for design tokens
+  demo/
+    views/        # DashboardView, SidebarView
+```
+
+## Key concepts
+
+### Messages and parts
+
+A message is not a plain string. Each `AiMessage` has a `parts` array that can contain:
+
+| Part type | Description |
+|---|---|
+| `text` | Plain text chunk, supports `pre-wrap` whitespace |
+| `table` | Structured table with columns and rows |
+| `proposal` | Action card with confirm/cancel buttons |
+| `error` | Inline error within the message bubble |
+
+This lets the AI return rich structured responses — tables, action cards, mixed text — in a single message.
+
+### Streaming
+
+The adapter returns an `AsyncIterable<AiStreamEvent>`. Juneau processes events one by one:
+
+- `text` events append text to the current assistant message in real time
+- `part` events append a structured block (table, proposal, error)
+- `done` signals the response is complete
+- `error` signals a fatal adapter failure
+
+`useAiChat` handles all of this — components are purely presentational.
+
+### Proactive greetings
+
+For dashboard-style views where the AI speaks first (no user input), use `sendGreeting`:
+
+```tsx
+const { sendGreeting } = useAiChat({ adapter: myAdapter });
+
+useEffect(() => {
+  sendGreeting('dashboard-init');
+}, []);
+```
+
+`sendGreeting` triggers the adapter and streams the response as an assistant message — no user bubble is shown in the conversation.
+
+### Adapter interface
+
+```ts
+interface AiBackendAdapter {
+  sendMessage(input: {
+    messages: AiMessage[];
+    context?: Record<string, unknown>;
+  }): AsyncIterable<AiStreamEvent>;
+}
+```
+
+Any object that satisfies this interface works. See **Adapters** for implementation examples.

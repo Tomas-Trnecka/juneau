@@ -1,0 +1,36 @@
+.wrapper {
+  overflow-x: auto;
+  margin: 8px 0;
+  border-radius: var(--juneau-radius-md);
+  border: 1px solid var(--juneau-color-border);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--juneau-font-size-base);
+}
+
+.th {
+  background-color: var(--juneau-color-surface-raised);
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--juneau-color-text-secondary);
+  border-bottom: 1px solid var(--juneau-color-border);
+  white-space: nowrap;
+}
+
+.tr:nth-child(even) {
+  background-color: var(--juneau-color-surface-raised);
+}
+
+.tr:hover {
+  background-color: var(--juneau-color-surface-hover);
+}
+
+.td {
+  padding: 7px 12px;
+  color: var(--juneau-color-text-primary);
+  border-bottom: 1px solid var(--juneau-color-border-subtle);
+}

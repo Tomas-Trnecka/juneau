@@ -1,0 +1,133 @@
+---
+title: Docs/Labels & i18n
+---
+
+# Labels & i18n
+
+Juneau does not ship its own i18n runtime. Instead, every user-facing string is
+collected into a single `JuneauLabels` object that you pass to `JuneauProvider`.
+This means it works with any i18n system — or none at all.
+
+## Built-in locales
+
+Two locales ship with the library:
+
+| Export | Language |
+|---|---|
+| `juneauEn` | English (default) |
+| `juneauCs` | Czech |
+
+```tsx
+import { juneauEn, juneauCs } from 'juneau';
+```
+
+## Switching locale
+
+Pass a locale to `JuneauProvider`. All components in the subtree update automatically —
+including both `AiSidebar` and any custom layouts using `AiChatHeader` or `AiChat` directly.
+
+```tsx
+import { JuneauProvider, AiSidebar, juneauCs } from 'juneau';
+
+<JuneauProvider labels={juneauCs}>
+  <AiSidebar adapter={myAdapter} />
+</JuneauProvider>
+```
+
+## Partial overrides
+
+`labels` accepts a `Partial<JuneauLabels>` — you only need to provide the keys you want
+to change. Any key you omit falls back to `juneauEn`.
+
+```tsx
+// Czech, but with a custom sidebar title
+<JuneauProvider labels={{ ...juneauCs, sidebarTitle: 'Finanční Asistent' }}>
+  <AiSidebar adapter={myAdapter} />
+</JuneauProvider>
+```
+
+## Integrating with your existing i18n system
+
+If your app already uses i18next, react-intl, or similar, just pass the translated
+strings directly — Juneau doesn't care where they come from:
+
+```tsx
+import { useTranslation } from 'react-i18next';
+import type { JuneauLabels } from 'juneau';
+
+function App() {
+  const { t } = useTranslation();
+
+  const labels: JuneauLabels = {
+    sidebarTitle:       t('ai.sidebarTitle'),
+    clearConversation:  t('ai.clearConversation'),
+    inputPlaceholder:   t('ai.inputPlaceholder'),
+    sendMessage:        t('ai.sendMessage'),
+    emptyStateText:     t('ai.emptyStateText'),
+    emptyStateHint:     t('ai.emptyStateHint'),
+    proposalConfirm:    t('ai.proposalConfirm'),
+    proposalCancel:     t('ai.proposalCancel'),
+    errorDismiss:       t('ai.errorDismiss'),
+    actionAddFile:      t('ai.actionAddFile'),
+    actionQuickActions: t('ai.actionQuickActions'),
+    actionNew:          t('ai.actionNew'),
+    actionHistory:      t('ai.actionHistory'),
+    actionRules:        t('ai.actionRules'),
+  };
+
+  return (
+    <JuneauProvider labels={labels}>
+      <AiSidebar adapter={myAdapter} />
+    </JuneauProvider>
+  );
+}
+```
+
+## Full label reference
+
+All keys and their English defaults:
+
+| Key | Default (EN) | Czech (CS) | Used in |
+|---|---|---|---|
+| `sidebarTitle` | `'AI Assistant'` | `'AI Asistent'` | `AiChatHeader` title |
+| `clearConversation` | `'Clear conversation'` | `'Vymazat konverzaci'` | `AiChatHeader` reset button |
+| `inputPlaceholder` | `'Ask a question… (Enter to send)'` | `'Zeptejte se na cokoliv…'` | `AiInput` textarea |
+| `sendMessage` | `'Send message'` | `'Odeslat zprávu'` | `AiInput` send button label + `aria-label` |
+| `emptyStateText` | `'Ask me anything about your data.'` | `'Zeptejte se mě na cokoliv z vašich dat.'` | `AiMessageList` empty state |
+| `emptyStateHint` | `'Try: "How much did we spend…"'` | `'Zkuste: „Kolik jsme utratili…"'` | `AiMessageList` empty state hint |
+| `proposalConfirm` | `'Confirm'` | `'Potvrdit'` | `AiProposalCard` fallback confirm label |
+| `proposalCancel` | `'Cancel'` | `'Zrušit'` | `AiProposalCard` fallback cancel label |
+| `errorDismiss` | `'Dismiss'` | `'Zavřít'` | `AiError` dismiss button `aria-label` |
+| `actionAddFile` | `'Add file'` | `'Přidat soubor'` | `AiInput` quick action bar |
+| `actionQuickActions` | `'Quick actions'` | `'Rychlé akce'` | `AiInput` quick action bar |
+| `actionNew` | `'New'` | `'Nový'` | `AiInput` quick action bar |
+| `actionHistory` | `'History'` | `'Historie'` | `AiInput` quick action bar |
+| `actionRules` | `'Rules'` | `'Pravidla'` | `AiInput` quick action bar |
+
+## Adding a new locale
+
+Create a file that satisfies the `JuneauLabels` type and export it:
+
+```ts
+// my-app/juneauDe.ts
+import type { JuneauLabels } from 'juneau';
+
+export const juneauDe: JuneauLabels = {
+  sidebarTitle:       'KI-Assistent',
+  clearConversation:  'Gespräch löschen',
+  inputPlaceholder:   'Stellen Sie eine Frage… (Enter zum Senden)',
+  sendMessage:        'Nachricht senden',
+  emptyStateText:     'Fragen Sie mich alles über Ihre Daten.',
+  emptyStateHint:     'Versuchen Sie: „Wie viel haben wir im Q2 für IT ausgegeben?"',
+  proposalConfirm:    'Bestätigen',
+  proposalCancel:     'Abbrechen',
+  errorDismiss:       'Schließen',
+  actionAddFile:      'Datei hinzufügen',
+  actionQuickActions: 'Schnellaktionen',
+  actionNew:          'Neu',
+  actionHistory:      'Verlauf',
+  actionRules:        'Regeln',
+};
+```
+
+If you'd like a locale included in the library itself, open a pull request.

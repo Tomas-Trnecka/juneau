@@ -1,0 +1,116 @@
+---
+title: Docs/Theming
+---
+
+# Theming
+
+Juneau uses CSS custom properties (variables) for all visual values. Every token is prefixed
+with `--juneau-` to avoid collisions with your own CSS variables.
+
+The default theme is a **black + pink** palette. You can override any subset of tokens
+without touching library internals.
+
+## Option 1 — JuneauProvider theme prop (recommended)
+
+Pass a `theme` object to `JuneauProvider`. Only the keys you provide are overridden —
+everything else falls back to the defaults.
+
+```tsx
+import { JuneauProvider, AiSidebar } from 'juneau';
+
+<JuneauProvider theme={{ colorPrimary: '#0f766e', colorAccent: '#14b8a6' }}>
+  <AiSidebar adapter={myAdapter} />
+</JuneauProvider>
+```
+
+This scopes overrides to the provider's DOM subtree, so multiple themed instances
+can coexist on the same page.
+
+### Full theme reference
+
+| Prop | CSS variable | Default | Usage |
+|---|---|---|---|
+| `colorPrimary` | `--juneau-color-primary` | `#000000` | Primary actions, user bubble, chat header background |
+| `colorPrimaryDark` | `--juneau-color-primary-dark` | `#252528` | Primary hover state |
+| `colorPrimaryLight` | `--juneau-color-primary-light` | `#ECECEC` | Primary tinted backgrounds |
+| `colorPrimaryBorder` | `--juneau-color-primary-border` | `#E8E8EC` | Primary tinted borders |
+| `colorAccent` | `--juneau-color-accent` | `#FF49A4` | Sidebar header background, proposal confirm button, assistant avatar |
+| `colorAccentDark` | `--juneau-color-accent-dark` | `#FF6BB3` | Accent hover |
+| `colorAccentLight` | `--juneau-color-accent-light` | `#FFF0F7` | Proposal card background |
+| `colorAccentBorder` | `--juneau-color-accent-border` | `#FFBDD9` | Proposal card border |
+| `colorSurface` | `--juneau-color-surface` | `#FFFFFF` | Cards, sidebar body, input background |
+| `colorSurfaceRaised` | `--juneau-color-surface-raised` | `#F4F4F6` | Page background, table headers, textarea |
+| `colorSurfaceHover` | `--juneau-color-surface-hover` | `#ECECEC` | Row and item hover |
+| `colorBorder` | `--juneau-color-border` | `#E8E8EC` | Default borders |
+| `colorBorderSubtle` | `--juneau-color-border-subtle` | `#ECECEC` | Table row dividers |
+| `colorTextPrimary` | `--juneau-color-text-primary` | `#000000` | Main body text |
+| `colorTextSecondary` | `--juneau-color-text-secondary` | `#474747` | Supporting text |
+| `colorTextMuted` | `--juneau-color-text-muted` | `#474747` | Labels, placeholders |
+| `colorTextFaint` | `--juneau-color-text-faint` | `#9090A0` | Empty states, hints |
+| `colorTextInverse` | `--juneau-color-text-inverse` | `#FFFFFF` | Text on dark/primary backgrounds |
+| `colorAssistantAvatar` | `--juneau-color-assistant-avatar` | `#FF49A4` | Background circle of the assistant avatar in message bubbles |
+| `radiusSm` | `--juneau-radius-sm` | `6px` | Buttons, small elements |
+| `radiusMd` | `--juneau-radius-md` | `8px` | Inputs, cards |
+| `radiusLg` | `--juneau-radius-lg` | `12px` | Panels, large cards |
+| `fontFamily` | `--juneau-font-family` | system-ui stack | Font family applied across all Juneau components |
+
+Semantic tokens (error, success, warning, danger) are not yet exposed as theme props
+but can be overridden via CSS — see Option 2 below.
+
+## Option 2 — CSS custom properties directly
+
+Override tokens on `:root` or any ancestor element in your own stylesheet.
+This works regardless of whether you use the `theme` prop.
+
+```css
+:root {
+  --juneau-color-primary: #0f766e;
+  --juneau-color-primary-dark: #0d9488;
+  --juneau-color-accent: #14b8a6;
+
+  /* Semantic tokens not exposed as theme props */
+  --juneau-color-error-bg: #fff1f2;
+  --juneau-color-error-border: #fb7185;
+  --juneau-color-error-text: #be123c;
+}
+```
+
+## Providing a custom font
+
+Set `fontFamily` on the `theme` prop. Juneau applies it as a CSS variable on the provider root — make sure the font is loaded in your app before mounting.
+
+```tsx
+<JuneauProvider theme={{ fontFamily: "'Inter', sans-serif" }}>
+  <AiSidebar adapter={myAdapter} />
+</JuneauProvider>
+```
+
+## Combining theme and labels
+
+`theme` and `labels` are fully independent and can be combined freely:
+
+```tsx
+<JuneauProvider
+  theme={{ colorPrimary: '#0f766e', colorAccent: '#14b8a6' }}
+  labels={juneauCs}
+>
+  <AiSidebar adapter={myAdapter} />
+</JuneauProvider>
+```
+
+## Multiple themes on one page
+
+Because overrides are scoped to the provider's subtree, you can render two chat panels
+with completely different themes simultaneously:
+
+```tsx
+<>
+  <JuneauProvider theme={{ colorPrimary: '#000000', colorAccent: '#FF49A4' }}>
+    <AiSidebar adapter={adapterA} />
+  </JuneauProvider>
+
+  <JuneauProvider theme={{ colorPrimary: '#0f766e', colorAccent: '#14b8a6' }}>
+    <AiSidebar adapter={adapterB} />
+  </JuneauProvider>
+</>
+```
