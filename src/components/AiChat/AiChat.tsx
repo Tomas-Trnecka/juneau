@@ -6,7 +6,6 @@ import { AiError } from '../AiError/AiError';
 import styles from './AiChat.module.css';
 
 type Props = {
-  // State — provided by the parent (useAiChat)
   messages: AiMessage[];
   input: string;
   isLoading: boolean;
@@ -15,7 +14,6 @@ type Props = {
   onSend: () => void;
   onProposalConfirm: (proposalId: string, payload: unknown) => void;
   onProposalCancel: (proposalId: string) => void;
-  // Presentation
   placeholder?: string;
   className?: string;
   style?: CSSProperties;

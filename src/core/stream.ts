@@ -1,6 +1,5 @@
 import type { AiStreamEvent } from './types';
 
-/** Delay helper for simulating async streaming */
 export const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 

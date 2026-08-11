@@ -11,7 +11,6 @@ export const mockAdapter: AiBackendAdapter = {
     const text = lastUserMessage?.parts.find(p => p.type === 'text');
     const query = text?.type === 'text' ? text.text.toLowerCase() : '';
 
-    // Pick a scenario based on keywords in the user message
     if (query.includes('q2') || query.includes('dodavatel') || query.includes('supplier') || query.includes('spend')) {
       yield* scenarioSpendBySupplier();
     } else if (query.includes('trend') || query.includes('monthly') || query.includes('měsíc')) {
@@ -23,8 +22,6 @@ export const mockAdapter: AiBackendAdapter = {
     }
   }
 };
-
-// ─── Scenarios ────────────────────────────────────────────────────────────────
 
 async function* scenarioSpendBySupplier(): AsyncIterable<AiStreamEvent> {
   yield* streamText('Připravuji přehled výdajů za IT v Q2…', 40);
@@ -118,9 +115,6 @@ async function* scenarioDefault(query: string): AsyncIterable<AiStreamEvent> {
   yield { type: 'done' };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Streams text character by character with a delay between chunks */
 async function* streamText(text: string, chunkDelayMs: number): AsyncIterable<AiStreamEvent> {
   const chunkSize = 3;
   for (let i = 0; i < text.length; i += chunkSize) {

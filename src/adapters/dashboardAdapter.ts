@@ -26,8 +26,6 @@ export const dashboardAdapter: AiBackendAdapter = {
   },
 };
 
-// ─── Scenarios ────────────────────────────────────────────────────────────────
-
 async function* scenarioGreeting(): AsyncIterable<AiStreamEvent> {
   await delay(600);
   yield* streamText('Dobrý den! Zde je váš přehled za dnešek.\n\n', 18);
@@ -123,8 +121,6 @@ async function* scenarioDefault(query: string): AsyncIterable<AiStreamEvent> {
   yield* streamText('\n\nZkuste se zeptat například:\n• Schválit faktury\n• Výdaje za Q2 podle dodavatelů', 20);
   yield { type: 'done' };
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function* streamText(text: string, chunkDelayMs: number): AsyncIterable<AiStreamEvent> {
   const chunkSize = 3;

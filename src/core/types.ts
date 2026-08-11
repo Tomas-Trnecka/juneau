@@ -1,8 +1,5 @@
-// ─── Message roles ────────────────────────────────────────────────────────────
-
 export type AiMessageRole = 'user' | 'assistant' | 'system';
 
-// ─── Message parts ────────────────────────────────────────────────────────────
 
 export type AiTextPart = {
   type: 'text';
@@ -37,8 +34,6 @@ export type AiErrorPart = {
 
 export type AiMessagePart = AiTextPart | AiTablePart | AiProposalPart | AiErrorPart;
 
-// ─── Message ──────────────────────────────────────────────────────────────────
-
 export type AiMessage = {
   id: string;
   role: AiMessageRole;
@@ -46,38 +41,16 @@ export type AiMessage = {
   createdAt: Date;
 };
 
-// ─── Stream events ────────────────────────────────────────────────────────────
-
-/** A chunk of text appended to the current assistant message */
-export type AiStreamTextEvent = {
-  type: 'text';
-  text: string;
-};
-
-/** A complete message part replacing/appending a structured block */
-export type AiStreamPartEvent = {
-  type: 'part';
-  part: AiTablePart | AiProposalPart | AiErrorPart;
-};
-
-/** Signals that the assistant is done responding */
-export type AiStreamDoneEvent = {
-  type: 'done';
-};
-
-/** Signals a fatal error from the adapter */
-export type AiStreamErrorEvent = {
-  type: 'error';
-  message: string;
-};
+export type AiStreamTextEvent = { type: 'text'; text: string };
+export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiErrorPart };
+export type AiStreamDoneEvent = { type: 'done' };
+export type AiStreamErrorEvent = { type: 'error'; message: string };
 
 export type AiStreamEvent =
   | AiStreamTextEvent
   | AiStreamPartEvent
   | AiStreamDoneEvent
   | AiStreamErrorEvent;
-
-// ─── Adapter interface ────────────────────────────────────────────────────────
 
 export type AiAdapterInput = {
   messages: AiMessage[];

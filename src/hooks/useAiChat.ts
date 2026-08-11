@@ -74,10 +74,8 @@ export function useAiChat({
       const lastPart = parts[parts.length - 1];
 
       if (lastPart?.type === 'text') {
-        // Append to existing text part
         parts[parts.length - 1] = { type: 'text', text: lastPart.text + chunk };
       } else {
-        // Start a new text part
         parts.push({ type: 'text', text: chunk });
       }
 
