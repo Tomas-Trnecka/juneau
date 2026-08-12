@@ -1,4 +1,7 @@
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { AiMessagePart } from '../../core/types';
+import { IconWarning } from '../icons';
 import { AiTablePart } from './AiTablePart';
 import { AiProposalCard } from './AiProposalCard';
 import styles from './AiMessagePartRenderer.module.css';
@@ -12,7 +15,12 @@ type Props = {
 export function AiMessagePartRenderer({ part, onProposalConfirm, onProposalCancel }: Props) {
   switch (part.type) {
     case 'text':
-      return <span className={styles.text}>{part.text}</span>;
+      return (
+        <div className={styles.markdown}>
+          {/* react-markdown never uses dangerouslySetInnerHTML — safe against XSS by default */}
+          <Markdown remarkPlugins={[remarkGfm]}>{part.text}</Markdown>
+        </div>
+      );
     case 'table':
       return <AiTablePart part={part} />;
     case 'proposal':
@@ -24,6 +32,11 @@ export function AiMessagePartRenderer({ part, onProposalConfirm, onProposalCance
         />
       );
     case 'error':
-      return <span className={styles.errorText}>⚠️ {part.message}</span>;
+      return (
+        <span className={styles.errorText}>
+          <IconWarning className={styles.errorIcon} />
+          {part.message}
+        </span>
+      );
   }
 }

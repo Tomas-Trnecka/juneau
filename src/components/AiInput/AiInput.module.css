@@ -122,3 +122,31 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.stopBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 1px solid var(--juneau-color-border);
+  border-radius: var(--juneau-radius-md);
+  background-color: var(--juneau-color-surface);
+  color: var(--juneau-color-text-secondary);
+  font-size: var(--juneau-font-size-base);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color var(--juneau-transition-fast), color var(--juneau-transition-fast);
+}
+
+.stopBtn:hover {
+  background-color: var(--juneau-color-surface-raised);
+  color: var(--juneau-color-text-primary);
+}
+
+.stopIcon {
+  width: 14px;
+  height: 14px;
+}

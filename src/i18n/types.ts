@@ -12,6 +12,11 @@ export type JuneauLabels = {
   // AiInput
   inputPlaceholder: string;
   sendMessage: string;
+  stopMessage: string;
+
+  // AiTypingIndicator
+  typingMessage: string;
+  connectingMessage: string;
   actionAddFile: string;
   actionQuickActions: string;
   actionNew: string;

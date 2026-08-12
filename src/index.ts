@@ -17,10 +17,14 @@ export type {
   AiStreamErrorEvent,
 } from './core/types';
 
-export { consumeStream, delay } from './core/stream';
+export { consumeStream, delay, getMessageText } from './core/stream';
 
 // ─── Adapters ─────────────────────────────────────────────────────────────────
 export { mockAdapter } from './adapters/mockAdapter';
+export { createSseAdapter } from './adapters/createSseAdapter';
+export type { SseAdapterOptions, SseEventParser } from './adapters/createSseAdapter';
+export { createFetchStreamAdapter } from './adapters/createFetchStreamAdapter';
+export type { FetchStreamAdapterOptions, FetchChunkParser } from './adapters/createFetchStreamAdapter';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 export { useAiChat } from './hooks/useAiChat';
@@ -40,6 +44,7 @@ export { AiSidebar } from './components/AiSidebar/AiSidebar';
 export { AiMessageList } from './components/AiMessageList/AiMessageList';
 export { AiMessageBubble } from './components/AiMessageBubble/AiMessageBubble';
 export { AiInput } from './components/AiInput/AiInput';
+export type { AiInputAction } from './components/AiInput/AiInput';
 export { AiTypingIndicator } from './components/AiTypingIndicator/AiTypingIndicator';
 export { AiError } from './components/AiError/AiError';
 export { AiMessagePartRenderer } from './components/parts/AiMessagePartRenderer';

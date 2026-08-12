@@ -68,10 +68,11 @@ function MyPage() {
 export default meta;
 type Story = StoryObj<typeof AiChat>;
 
-const emptyState: Pick<React.ComponentProps<typeof AiChat>, 'messages' | 'input' | 'isLoading' | 'error' | 'onInputChange' | 'onSend' | 'onProposalConfirm' | 'onProposalCancel'> = {
+const emptyState: Pick<React.ComponentProps<typeof AiChat>, 'messages' | 'input' | 'isLoading' | 'isConnecting' | 'error' | 'onInputChange' | 'onSend' | 'onProposalConfirm' | 'onProposalCancel'> = {
   messages: [],
   input: '',
   isLoading: false,
+  isConnecting: false,
   error: null,
   onInputChange: () => {},
   onSend: () => {},
@@ -162,6 +163,7 @@ export const LiveWithMockAdapter: Story = {
         messages={chat.messages}
         input={chat.input}
         isLoading={chat.isLoading}
+        isConnecting={chat.isConnecting}
         error={chat.error}
         onInputChange={chat.setInput}
         onSend={chat.sendMessage}
@@ -196,6 +198,7 @@ export const LiveWithDashboardAdapter: Story = {
         messages={chat.messages}
         input={chat.input}
         isLoading={chat.isLoading}
+        isConnecting={chat.isConnecting}
         error={chat.error}
         onInputChange={chat.setInput}
         onSend={chat.sendMessage}

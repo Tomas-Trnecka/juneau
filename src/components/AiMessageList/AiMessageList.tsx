@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import type { AiMessage } from '../../core/types';
 import { useLabels } from '../../i18n/context';
 import { AiMessageBubble } from '../AiMessageBubble/AiMessageBubble';
@@ -8,11 +9,15 @@ import styles from './AiMessageList.module.css';
 type Props = {
   messages: AiMessage[];
   isLoading: boolean;
+  /** True while waiting for the first token — shows a "connecting" label inside the typing indicator. */
+  isConnecting: boolean;
   onProposalConfirm: (proposalId: string, payload: unknown) => void;
   onProposalCancel: (proposalId: string) => void;
+  /** Override the assistant avatar icon. Forwarded to every AiMessageBubble. */
+  assistantIcon?: ReactNode;
 };
 
-export function AiMessageList({ messages, isLoading, onProposalConfirm, onProposalCancel }: Props) {
+export function AiMessageList({ messages, isLoading, isConnecting, onProposalConfirm, onProposalCancel, assistantIcon }: Props) {
   const labels = useLabels();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -36,11 +41,12 @@ export function AiMessageList({ messages, isLoading, onProposalConfirm, onPropos
           message={message}
           onProposalConfirm={onProposalConfirm}
           onProposalCancel={onProposalCancel}
+          assistantIcon={assistantIcon}
         />
       ))}
       {isLoading && (
         <div className={styles.typing}>
-          <AiTypingIndicator />
+          <AiTypingIndicator connecting={isConnecting} />
         </div>
       )}
       <div ref={bottomRef} />

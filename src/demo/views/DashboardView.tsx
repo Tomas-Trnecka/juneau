@@ -17,6 +17,7 @@ export function DashboardView() {
     sendMessage,
     sendGreeting,
     isLoading,
+    isConnecting,
     error,
     confirmProposal,
     cancelProposal,
@@ -50,6 +51,7 @@ export function DashboardView() {
             messages={messages}
             input={input}
             isLoading={isLoading}
+            isConnecting={isConnecting}
             error={error}
             onInputChange={setInput}
             onSend={sendMessage}

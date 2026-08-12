@@ -1,5 +1,6 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { AiMessage } from '../../core/types';
+import type { AiInputAction } from '../AiInput/AiInput';
 import { AiMessageList } from '../AiMessageList/AiMessageList';
 import { AiInput } from '../AiInput/AiInput';
 import { AiError } from '../AiError/AiError';
@@ -9,12 +10,25 @@ type Props = {
   messages: AiMessage[];
   input: string;
   isLoading: boolean;
+  isConnecting: boolean;
   error: string | null;
   onInputChange: (value: string) => void;
   onSend: () => void;
+  /** Called when the user cancels the in-flight stream. Shown as a stop button while isLoading. */
+  onStop?: () => void;
   onProposalConfirm: (proposalId: string, payload: unknown) => void;
   onProposalCancel: (proposalId: string) => void;
   placeholder?: string;
+  /** Override the assistant avatar icon. Forwarded to every message bubble. */
+  assistantIcon?: ReactNode;
+  /**
+   * Toolbar action buttons rendered left of the send button.
+   * Pass an empty array to hide the toolbar entirely.
+   * Defaults to five built-in actions (attach, quick actions, new, history, rules).
+   */
+  actions?: AiInputAction[];
+  /** Override the send button icon. Defaults to a paper-plane icon. */
+  sendIcon?: ReactNode;
   className?: string;
   style?: CSSProperties;
 };
@@ -31,12 +45,17 @@ export function AiChat({
   messages,
   input,
   isLoading,
+  isConnecting,
   error,
   onInputChange,
   onSend,
+  onStop,
   onProposalConfirm,
   onProposalCancel,
   placeholder,
+  assistantIcon,
+  actions,
+  sendIcon,
   className,
   style,
 }: Props) {
@@ -48,8 +67,10 @@ export function AiChat({
       <AiMessageList
         messages={messages}
         isLoading={isLoading}
+        isConnecting={isConnecting}
         onProposalConfirm={onProposalConfirm}
         onProposalCancel={onProposalCancel}
+        assistantIcon={assistantIcon}
       />
 
       {error && <AiError message={error} />}
@@ -58,8 +79,11 @@ export function AiChat({
         value={input}
         onChange={onInputChange}
         onSend={onSend}
+        onStop={onStop}
         isLoading={isLoading}
         placeholder={placeholder}
+        actions={actions}
+        sendIcon={sendIcon}
       />
     </div>
   );

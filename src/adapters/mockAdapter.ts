@@ -2,8 +2,9 @@ import { delay } from '../core/stream';
 import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from '../core/types';
 
 /**
- * Simulates AI streaming responses for development and demo purposes.
- * Replace with a real adapter (OpenAI, Claude, custom backend) in production.
+ * Simulates AI streaming responses for development and testing.
+ * Triggers different scenarios based on keywords in the last user message.
+ * Replace with a real adapter (OpenAI, Anthropic, custom backend) in production.
  */
 export const mockAdapter: AiBackendAdapter = {
   async *sendMessage(input: AiAdapterInput): AsyncIterable<AiStreamEvent> {
@@ -11,54 +12,59 @@ export const mockAdapter: AiBackendAdapter = {
     const text = lastUserMessage?.parts.find(p => p.type === 'text');
     const query = text?.type === 'text' ? text.text.toLowerCase() : '';
 
-    if (query.includes('q2') || query.includes('dodavatel') || query.includes('supplier') || query.includes('spend')) {
-      yield* scenarioSpendBySupplier();
-    } else if (query.includes('trend') || query.includes('monthly') || query.includes('měsíc')) {
-      yield* scenarioMonthlyTrend();
-    } else if (query.includes('help') || query.includes('pomoc') || query.includes('what can')) {
+    if (query.includes('table') || query.includes('data') || query.includes('list') || query.includes('show')) {
+      yield* scenarioTable();
+    } else if (query.includes('proposal') || query.includes('suggest') || query.includes('recommend')) {
+      yield* scenarioProposal();
+    } else if (query.includes('help') || query.includes('what can') || query.includes('how do')) {
       yield* scenarioHelp();
+    } else if (query.includes('error') || query.includes('fail') || query.includes('break')) {
+      yield* scenarioError();
     } else {
       yield* scenarioDefault(query);
     }
   }
 };
 
-async function* scenarioSpendBySupplier(): AsyncIterable<AiStreamEvent> {
-  yield* streamText('Připravuji přehled výdajů za IT v Q2…', 40);
-  await delay(600);
-  yield* streamText(' Načítám data ze systému.', 40);
+async function* scenarioTable(): AsyncIterable<AiStreamEvent> {
+  yield* streamText('Here is a summary of the data you requested:\n\n', 30);
   await delay(400);
 
   yield {
     type: 'part',
     part: {
       type: 'table',
-      columns: ['Dodavatel', 'Kategorie', 'Celkem (CZK)', 'Faktury'],
+      columns: ['Name', 'Category', 'Value', 'Status'],
       rows: [
-        { Dodavatel: 'Microsoft s.r.o.', Kategorie: 'Software', 'Celkem (CZK)': '842 400', Faktury: '3' },
-        { Dodavatel: 'AWS EMEA SARL', Kategorie: 'Cloud', 'Celkem (CZK)': '614 800', Faktury: '6' },
-        { Dodavatel: 'DataSys a.s.', Kategorie: 'Konzultace', 'Celkem (CZK)': '390 000', Faktury: '2' },
-        { Dodavatel: 'NetFlow s.r.o.', Kategorie: 'Infrastruktura', 'Celkem (CZK)': '218 500', Faktury: '4' },
-        { Dodavatel: 'SoftLicence EU', Kategorie: 'Software', 'Celkem (CZK)': '97 200', Faktury: '1' }
+        { Name: 'Item Alpha',   Category: 'Type A', Value: '1,200', Status: 'Active' },
+        { Name: 'Item Beta',    Category: 'Type B', Value: '840',   Status: 'Active' },
+        { Name: 'Item Gamma',   Category: 'Type A', Value: '3,050', Status: 'Pending' },
+        { Name: 'Item Delta',   Category: 'Type C', Value: '610',   Status: 'Inactive' },
+        { Name: 'Item Epsilon', Category: 'Type B', Value: '2,200', Status: 'Active' },
       ]
     }
   };
 
-  await delay(500);
-  yield* streamText('\n\nCelkové IT výdaje v Q2 dosáhly **2 162 900 CZK** — nárůst o 12 % oproti Q1.', 30);
   await delay(300);
+  yield* streamText('\nTotal across all entries: **7,900** — Type A accounts for the largest share at 53%.', 25);
+  yield { type: 'done' };
+}
+
+async function* scenarioProposal(): AsyncIterable<AiStreamEvent> {
+  yield* streamText('Based on the current data, I have a suggestion for you:\n\n', 30);
+  await delay(500);
 
   yield {
     type: 'part',
     part: {
       type: 'proposal',
       proposal: {
-        id: 'save-it-q2-report',
-        title: 'Uložit jako opakovaný report',
-        description: 'Tento přehled IT výdajů podle dodavatelů se automaticky vygeneruje každý kvartál.',
-        confirmLabel: 'Uložit report',
-        cancelLabel: 'Zrušit',
-        payload: { reportType: 'spend-by-supplier', period: 'Q2', category: 'IT' }
+        id: 'mock-proposal-1',
+        title: 'Save this as a recurring report',
+        description: 'This summary can be automatically generated on a schedule so you always have up-to-date insights.',
+        confirmLabel: 'Save report',
+        cancelLabel: 'Dismiss',
+        payload: { reportType: 'summary', schedule: 'weekly' }
       }
     }
   };
@@ -66,52 +72,37 @@ async function* scenarioSpendBySupplier(): AsyncIterable<AiStreamEvent> {
   yield { type: 'done' };
 }
 
-async function* scenarioMonthlyTrend(): AsyncIterable<AiStreamEvent> {
-  yield* streamText('Generuji měsíční trend výdajů…', 40);
-  await delay(700);
-
-  yield {
-    type: 'part',
-    part: {
-      type: 'table',
-      columns: ['Měsíc', 'Výdaje (CZK)', 'Faktury', 'Změna'],
-      rows: [
-        { 'Měsíc': 'Leden', 'Výdaje (CZK)': '1 240 000', 'Faktury': '18', 'Změna': '—' },
-        { 'Měsíc': 'Únor', 'Výdaje (CZK)': '980 000', 'Faktury': '14', 'Změna': '-21 %' },
-        { 'Měsíc': 'Březen', 'Výdaje (CZK)': '1 560 000', 'Faktury': '22', 'Změna': '+59 %' },
-        { 'Měsíc': 'Duben', 'Výdaje (CZK)': '1 120 000', 'Faktury': '16', 'Změna': '-28 %' },
-        { 'Měsíc': 'Květen', 'Výdaje (CZK)': '1 380 000', 'Faktury': '20', 'Změna': '+23 %' },
-        { 'Měsíc': 'Červen', 'Výdaje (CZK)': '1 650 000', 'Faktury': '25', 'Změna': '+20 %' }
-      ]
-    }
-  };
-
-  await delay(400);
-  yield* streamText('\n\nVýdaje mají od března rostoucí trend. Největší spike byl v březnu (+59 %).', 30);
+async function* scenarioHelp(): AsyncIterable<AiStreamEvent> {
+  yield* streamText('I\'m a general-purpose AI assistant. Here\'s what I can help with:\n\n', 30);
+  await delay(200);
+  yield* streamText('- **Summarise data** — ask me to show, list, or summarise information\n', 22);
+  await delay(150);
+  yield* streamText('- **Make suggestions** — ask me to recommend or propose something\n', 22);
+  await delay(150);
+  yield* streamText('- **Answer questions** — ask me anything and I\'ll do my best\n', 22);
+  await delay(200);
+  yield* streamText('\nTry asking: *"Show me the data"* or *"Can you suggest something?"*', 25);
   yield { type: 'done' };
 }
 
-async function* scenarioHelp(): AsyncIterable<AiStreamEvent> {
-  yield* streamText('Jsem váš AI asistent pro finanční analytics. Mohu vám pomoci s:\n\n', 35);
-  await delay(200);
-  yield* streamText('• **Přehledy výdajů** — podle dodavatele, kategorie nebo období\n', 25);
-  await delay(150);
-  yield* streamText('• **Měsíční trendy** — analýza vývoje nákladů\n', 25);
-  await delay(150);
-  yield* streamText('• **Anomálie** — detekce neobvyklých výdajů\n', 25);
-  await delay(150);
-  yield* streamText('• **Reporty** — vytvoření a uložení opakovaných přehledů\n', 25);
-  await delay(200);
-  yield* streamText('\nZkuste se zeptat například: *"Kolik jsme utratili za IT v Q2 podle dodavatelů?"*', 30);
-  yield { type: 'done' };
+async function* scenarioError(): AsyncIterable<AiStreamEvent> {
+  yield* streamText('Attempting to process your request…', 30);
+  await delay(800);
+  yield { type: 'error', message: 'Simulated error: the upstream service returned an unexpected response.' };
 }
 
 async function* scenarioDefault(query: string): AsyncIterable<AiStreamEvent> {
-  yield* streamText(`Rozumím, hledáte informace k tématu "${query || 'vašeho dotazu'}".`, 35);
-  await delay(500);
-  yield* streamText('\n\nPro detailní analýzu zkuste upřesnit:', 35);
-  await delay(300);
-  yield* streamText('\n• Jaké období vás zajímá? (Q1, Q2, konkrétní měsíc)\n• Jakou kategorii? (IT, Marketing, Provoz)\n• Chcete přehled podle dodavatele nebo kategorie?', 20);
+  yield* streamText(`Got it — you asked about *"${query || 'your request'}"*.\n\n`, 30);
+  await delay(400);
+  yield* streamText('I\'m a **mock adapter** used for development. I respond to a few trigger words:\n\n', 25);
+  await delay(200);
+  yield* streamText('- Say **"show"**, **"list"**, **"data"**, or **"table"** → renders a data table\n', 22);
+  await delay(150);
+  yield* streamText('- Say **"suggest"**, **"recommend"**, or **"proposal"** → renders a proposal card\n', 22);
+  await delay(150);
+  yield* streamText('- Say **"help"** or **"what can you do"** → shows capabilities\n', 22);
+  await delay(150);
+  yield* streamText('- Say **"error"** or **"fail"** → simulates an error response\n', 22);
   yield { type: 'done' };
 }
 

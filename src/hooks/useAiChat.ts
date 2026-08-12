@@ -33,7 +33,15 @@ export type UseAiChatReturn = {
    * greetings or page-load summaries where the AI speaks first.
    */
   sendGreeting: (contextHint: string) => Promise<void>;
+  /** Aborts the in-flight stream. No-op if nothing is streaming. */
+  stop: () => void;
   isLoading: boolean;
+  /**
+   * True from the moment a message is sent until the first token arrives from the stream.
+   * Use this to show a "connecting…" state distinct from the typing indicator shown
+   * while tokens are actively streaming in.
+   */
+  isConnecting: boolean;
   error: string | null;
   reset: () => void;
   confirmProposal: (proposalId: string, payload: unknown) => void;
@@ -49,6 +57,7 @@ export function useAiChat({
   const [messages, setMessages] = useState<AiMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Ref so consumeStream callback always sees latest messages without stale closure
@@ -102,6 +111,7 @@ export function useAiChat({
 
     setMessages(prev => [...prev, userMessage, assistantMessage]);
     setIsLoading(true);
+    setIsConnecting(true);
 
     abortRef.current?.abort();
     const abort = new AbortController();
@@ -113,6 +123,8 @@ export function useAiChat({
       await consumeStream(
         stream,
         (event: AiStreamEvent) => {
+          // First event of any kind means we're no longer just connecting
+          setIsConnecting(false);
           switch (event.type) {
             case 'text':  appendTextToLast(event.text); break;
             case 'part':  appendPartToLast(event.part); break;
@@ -131,6 +143,7 @@ export function useAiChat({
       appendPartToLast({ type: 'error', message });
     } finally {
       setIsLoading(false);
+      setIsConnecting(false);
     }
   }, [adapter, context, appendTextToLast, appendPartToLast]);
 
@@ -150,6 +163,7 @@ export function useAiChat({
     if (isLoading) return;
     setError(null);
     setIsLoading(true);
+    setIsConnecting(true);
 
     // Add only an assistant placeholder — no user bubble
     const assistantMessage: AiMessage = {
@@ -177,6 +191,7 @@ export function useAiChat({
       await consumeStream(
         stream,
         (event: AiStreamEvent) => {
+          setIsConnecting(false);
           switch (event.type) {
             case 'text':  appendTextToLast(event.text); break;
             case 'part':  appendPartToLast(event.part); break;
@@ -195,8 +210,15 @@ export function useAiChat({
       appendPartToLast({ type: 'error', message });
     } finally {
       setIsLoading(false);
+      setIsConnecting(false);
     }
   }, [isLoading, adapter, context, appendTextToLast, appendPartToLast]);
+
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+    setIsLoading(false);
+    setIsConnecting(false);
+  }, []);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -204,6 +226,7 @@ export function useAiChat({
     setInput('');
     setError(null);
     setIsLoading(false);
+    setIsConnecting(false);
   }, []);
 
   const confirmProposal = useCallback((proposalId: string, payload: unknown) => {
@@ -221,7 +244,9 @@ export function useAiChat({
     sendMessage,
     sendMessageWithText,
     sendGreeting,
+    stop,
     isLoading,
+    isConnecting,
     error,
     reset,
     confirmProposal,
