@@ -17,6 +17,13 @@ export type {
   AiStreamPartEvent,
   AiStreamDoneEvent,
   AiStreamErrorEvent,
+  // Wire protocol — what Juneau-compatible backends should stream
+  JuneauWireEvent,
+  JuneauWireText,
+  JuneauWireActivity,
+  JuneauWirePart,
+  JuneauWireDone,
+  JuneauWireError,
 } from './core/types';
 
 export { consumeStream, delay, getMessageText } from './core/stream';

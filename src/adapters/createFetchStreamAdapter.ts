@@ -1,4 +1,5 @@
-import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from '../core/types';
+import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent, JuneauWireEvent } from '../core/types';
+import { parseJuneauWire } from './parseJuneauWire';
 
 /**
  * How to map a raw text chunk from the response body to Juneau stream events.
@@ -197,27 +198,15 @@ async function* readChunkedStream(
   yield { type: 'done' };
 }
 
-// ─── Default parser: newline-delimited JSON (NDJSON) ─────────────────────────
-// Expects lines of the form:
-//   { "text": "hello" }   → text chunk
-//   { "done": true }      → stream finished
-//   { "error": "msg" }    → stream error
+// ─── Default parser: Juneau wire protocol (NDJSON) ───────────────────────────
+//
+// Each newline-delimited chunk is parsed as a JuneauWireEvent.
+// Falls back to treating the chunk as plain text if it can't be parsed.
 
 const defaultNdjsonParser: FetchChunkParser = (chunk) => {
-  try {
-    const json = JSON.parse(chunk) as {
-      text?: string;
-      done?: boolean;
-      error?: string;
-    };
+  const wire = parseJuneauWire(chunk);
+  if (wire.length > 0) return wire;
 
-    if (json.error) return [{ type: 'error', message: json.error }];
-    if (json.done)  return [{ type: 'done' }];
-    if (json.text)  return [{ type: 'text', text: json.text }];
-
-    return [];
-  } catch {
-    // Not JSON — treat the raw chunk as plain text
-    return [{ type: 'text', text: chunk }];
-  }
+  // Not a Juneau wire event — treat the raw chunk as plain text
+  return chunk ? [{ type: 'text', text: chunk }] : [];
 };

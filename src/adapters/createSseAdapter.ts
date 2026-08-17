@@ -1,4 +1,5 @@
-import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from '../core/types';
+import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent, JuneauWireEvent } from '../core/types';
+import { parseJuneauWire } from './parseJuneauWire';
 
 /**
  * How to map a parsed SSE data payload to Juneau stream events.
@@ -200,16 +201,26 @@ async function* readSseStream(
   yield { type: 'done' };
 }
 
-// ─── Default parser: OpenAI chat completions streaming format ─────────────────
+// ─── Default parser ───────────────────────────────────────────────────────────
+//
+// Tries Juneau wire protocol first. If the line looks like an OpenAI streaming
+// response instead (choices[0].delta.content), falls back to that so the adapter
+// works out of the box with OpenAI-compatible backends too.
 
 const defaultOpenAiParser: SseEventParser = (data) => {
+  if (!data || data === '[DONE]') return [];
+
+  // Try Juneau wire protocol first
+  const wire = parseJuneauWire(data);
+  if (wire.length > 0) return wire;
+
+  // Fallback: OpenAI chat completions streaming format
   try {
     const json = JSON.parse(data) as {
       choices?: Array<{ delta?: { content?: string | null }; finish_reason?: string | null }>;
       error?: { message?: string };
     };
 
-    // OpenAI error object inside the stream
     if (json.error?.message) {
       return [{ type: 'error', message: json.error.message }];
     }
@@ -217,17 +228,11 @@ const defaultOpenAiParser: SseEventParser = (data) => {
     const delta = json.choices?.[0]?.delta;
     const finishReason = json.choices?.[0]?.finish_reason;
 
-    if (finishReason === 'stop') {
-      return [{ type: 'done' }];
-    }
-
-    if (delta?.content) {
-      return [{ type: 'text', text: delta.content }];
-    }
+    if (finishReason === 'stop') return [{ type: 'done' }];
+    if (delta?.content) return [{ type: 'text', text: delta.content }];
 
     return [];
   } catch {
-    // Non-JSON line — skip silently
     return [];
   }
 };

@@ -110,9 +110,35 @@ type AiAdapterInput = {
 
 ## Built-in adapters
 
-- `createSseAdapter(url, options?)` — SSE / OpenAI-compatible streams. Parses `choices[0].delta.content` by default. Options: `method`, `headers`, `getHeaders`, `getBody`, `parseEvent`.
-- `createFetchStreamAdapter(url, options?)` — raw chunked HTTP / NDJSON. Options: `method`, `headers`, `getHeaders`, `getBody`, `parseChunk`.
+- `createSseAdapter(url, options?)` — SSE streaming. Default parser understands Juneau wire protocol first, falls back to OpenAI format (`choices[0].delta.content`). Options: `method`, `headers`, `getHeaders`, `getBody`, `credentials`, `parseEvent`.
+- `createFetchStreamAdapter(url, options?)` — raw chunked HTTP / NDJSON. Default parser understands Juneau wire protocol; falls back to treating unknown chunks as plain text. Options: `method`, `headers`, `getHeaders`, `getBody`, `credentials`, `parseChunk`.
 - `mockAdapter` — dev-only, keyword-triggered scenarios: table, proposal, activity, help, error.
+
+Both adapters accept `credentials?: RequestCredentials` for cross-origin cookie auth (`'include'`).
+
+## Juneau wire protocol
+
+Standard JSON format Juneau-compatible backends should stream. Both adapters parse this automatically — no custom parser needed.
+
+Each SSE `data:` line or NDJSON line must be one of:
+
+```
+{ "type": "text", "text": "string" }
+
+{ "type": "activity", "id"?: "string", "title": "string", "description"?: "string", "status": "running" | "done" | "failed", "metadata"?: {} }
+
+{ "type": "part", "part": { "type": "table", ... } | { "type": "proposal", ... } }
+
+{ "type": "done" }
+
+{ "type": "error", "message": "string" }
+```
+
+Activity `id` behaviour: same `id` → update in-place (running → done). No `id` → append as timeline row.
+Activity `metadata`: opaque, not rendered by Juneau. Use for internal data (tool name, duration, skill ID).
+
+Exported wire types: `JuneauWireEvent`, `JuneauWireText`, `JuneauWireActivity`, `JuneauWirePart`, `JuneauWireDone`, `JuneauWireError`.
+Shared parser utility: `parseJuneauWire(raw: string): AiStreamEvent[]` — used internally by both adapters, not exported.
 
 ## Typical integration pattern
 
@@ -139,7 +165,7 @@ useEffect(() => {
 
 ## Exports
 
-Types: `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiTextPart`, `AiTablePartType`, `AiProposalPart`, `AiProposal`, `AiActivityPartType`, `AiActivityStatus`, `AiErrorPart`, `AiBackendAdapter`, `AiAdapterInput`, `AiStreamEvent`, `AiStreamTextEvent`, `AiStreamPartEvent`, `AiStreamDoneEvent`, `AiStreamErrorEvent`, `JuneauTheme`, `JuneauLabels`, `AiInputAction`, `UseAiChatOptions`, `UseAiChatReturn`, `AiChatContextValue`
+Types: `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiTextPart`, `AiTablePartType`, `AiProposalPart`, `AiProposal`, `AiActivityPartType`, `AiActivityStatus`, `AiErrorPart`, `AiBackendAdapter`, `AiAdapterInput`, `AiStreamEvent`, `AiStreamTextEvent`, `AiStreamPartEvent`, `AiStreamDoneEvent`, `AiStreamErrorEvent`, `JuneauWireEvent`, `JuneauWireText`, `JuneauWireActivity`, `JuneauWirePart`, `JuneauWireDone`, `JuneauWireError`, `JuneauTheme`, `JuneauLabels`, `AiInputAction`, `UseAiChatOptions`, `UseAiChatReturn`, `AiChatContextValue`
 
 Utilities: `consumeStream`, `delay`, `getMessageText`
 

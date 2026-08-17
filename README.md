@@ -182,6 +182,44 @@ export const myAdapter: AiBackendAdapter = {
 
 ---
 
+### Juneau wire protocol — for Juneau-compatible backends
+
+If your backend is built specifically for Juneau (e.g. Tappeer), stream newline-delimited JSON where each line is one of these shapes. Both `createSseAdapter` and `createFetchStreamAdapter` parse this automatically — no custom `parseEvent` or `parseChunk` needed.
+
+```ts
+// Text chunk — appended to the current assistant bubble
+{ "type": "text", "text": "Here is what I found:" }
+
+// Activity — shows AI progress (skill selection, tool calls, etc.)
+// Send the same `id` with a new status to update in-place
+{ "type": "activity", "id": "skill-select", "title": "Selecting skill", "description": "Finding the best skill for this request.", "status": "running" }
+{ "type": "activity", "id": "skill-select", "title": "Skill selected", "description": "Using Document Search.", "status": "done" }
+{ "type": "activity", "id": "doc-search",   "title": "Searching document", "status": "running" }
+{ "type": "activity", "id": "doc-search",   "title": "Document found", "description": "INV-2024-0894", "status": "done" }
+
+// Rich block — table or proposal
+{ "type": "part", "part": { "type": "table", "columns": ["Name", "Amount"], "rows": [...] } }
+{ "type": "part", "part": { "type": "proposal", "proposal": { "id": "...", "title": "..." } } }
+
+// Stream finished cleanly
+{ "type": "done" }
+
+// Stream error — ends the stream
+{ "type": "error", "message": "Something went wrong." }
+```
+
+**Activity `status` values:** `running` | `done` | `failed`
+
+**Activity `id` behaviour:**
+- With `id` — a later event with the same `id` updates the existing row in-place (running → done)
+- Without `id` — each activity appends as a new timeline row
+
+**Activity `metadata`** is an optional opaque object — not rendered by Juneau, available for logging or custom renderers. Use it for internal data (tool name, duration, skill ID) that should not be shown to the user.
+
+`createSseAdapter` also retains OpenAI-format fallback parsing (`choices[0].delta.content`) so it works with both Juneau-compatible backends and standard OpenAI proxies.
+
+---
+
 ### `mockAdapter` — for development
 
 Shipped for local development. No backend needed — responds to keywords in the message:
