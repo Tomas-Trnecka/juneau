@@ -5,6 +5,7 @@ export const juneauEn: JuneauLabels = {
   clearConversation: 'Clear conversation',
   minimizeSidebar: 'Minimize',
   expandSidebar: 'Expand',
+  userLabel: 'You',
   inputPlaceholder: 'Ask a question… (Enter to send)',
   sendMessage: 'Send message',
   stopMessage: 'Stop',

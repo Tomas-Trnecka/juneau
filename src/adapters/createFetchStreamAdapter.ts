@@ -39,6 +39,16 @@ export type FetchStreamAdapterOptions = {
   getBody?: (input: AiAdapterInput) => unknown;
 
   /**
+   * Credentials mode passed to fetch. Use `'include'` for cross-origin requests
+   * that require cookies (e.g. session-based auth to a different domain).
+   * Defaults to browser default (`'same-origin'`).
+   *
+   * @example
+   * credentials: 'include'
+   */
+  credentials?: RequestCredentials;
+
+  /**
    * How to parse each chunk from the response stream into Juneau events.
    *
    * Defaults to a newline-delimited JSON (NDJSON) parser that expects each
@@ -101,6 +111,7 @@ export function createFetchStreamAdapter(
     getHeaders,
     getBody,
     parseChunk = defaultNdjsonParser,
+    credentials,
   } = options;
 
   return {
@@ -113,6 +124,7 @@ export function createFetchStreamAdapter(
 
       const response = await fetch(url, {
         method,
+        credentials,
         headers: {
           'Content-Type': 'application/json',
           ...staticHeaders,

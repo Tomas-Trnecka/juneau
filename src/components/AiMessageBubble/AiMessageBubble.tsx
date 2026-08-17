@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { IconWandMagicSparkles } from '../icons';
 import type { AiMessage } from '../../core/types';
+import { useLabels } from '../../i18n/context';
 import { AiMessagePartRenderer } from '../parts/AiMessagePartRenderer';
 import styles from './AiMessageBubble.module.css';
 
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function AiMessageBubble({ message, onProposalConfirm, onProposalCancel, assistantIcon }: Props) {
+  const labels = useLabels();
   const isUser = message.role === 'user';
 
   return (
@@ -35,7 +37,7 @@ export function AiMessageBubble({ message, onProposalConfirm, onProposalCancel, 
           <span className={styles.empty} />
         )}
       </div>
-      {isUser && <div className={styles.avatar}>You</div>}
+      {isUser && <div className={styles.avatar}>{labels.userLabel}</div>}
     </div>
   );
 }

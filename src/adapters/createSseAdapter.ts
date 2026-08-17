@@ -38,6 +38,16 @@ export type SseAdapterOptions = {
   getBody?: (input: AiAdapterInput) => unknown;
 
   /**
+   * Credentials mode passed to fetch. Use `'include'` for cross-origin requests
+   * that require cookies (e.g. session-based auth to a different domain).
+   * Defaults to browser default (`'same-origin'`).
+   *
+   * @example
+   * credentials: 'include'
+   */
+  credentials?: RequestCredentials;
+
+  /**
    * Custom SSE line parser. Receives the raw string after `data: ` and returns
    * zero or more Juneau stream events.
    *
@@ -104,6 +114,7 @@ export function createSseAdapter(url: string, options: SseAdapterOptions = {}): 
     getHeaders,
     getBody,
     parseEvent = defaultOpenAiParser,
+    credentials,
   } = options;
 
   return {
@@ -116,6 +127,7 @@ export function createSseAdapter(url: string, options: SseAdapterOptions = {}): 
 
       const response = await fetch(url, {
         method,
+        credentials,
         headers: {
           'Content-Type': 'application/json',
           ...staticHeaders,

@@ -11,6 +11,9 @@ export type JuneauLabels = {
   minimizeSidebar: string;
   expandSidebar: string;
 
+  // AiMessageBubble
+  userLabel: string;
+
   // AiInput
   inputPlaceholder: string;
   sendMessage: string;

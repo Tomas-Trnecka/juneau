@@ -5,6 +5,7 @@ export const juneauCs: JuneauLabels = {
   clearConversation: 'Vymazat konverzaci',
   minimizeSidebar: 'Minimalizovat',
   expandSidebar: 'Rozbalit',
+  userLabel: 'Vy',
   inputPlaceholder: 'Zeptejte se na cokoliv… (Enter pro odeslání)',
   sendMessage: 'Odeslat zprávu',
   stopMessage: 'Zastavit',

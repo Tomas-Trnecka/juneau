@@ -115,14 +115,24 @@ export function useAiChat({
       createdAt: new Date(),
     };
 
-    const assistantMessage: AiMessage = {
-      id: nextId(),
-      role: 'assistant',
-      parts: [],
-      createdAt: new Date(),
+    // Don't add the assistant placeholder upfront — add it lazily on the first
+    // event so an immediate error doesn't leave a blank bubble in the UI.
+    const assistantId = nextId();
+    let assistantAdded = false;
+
+    const ensureAssistantBubble = () => {
+      if (assistantAdded) return;
+      assistantAdded = true;
+      const assistantMessage: AiMessage = {
+        id: assistantId,
+        role: 'assistant',
+        parts: [],
+        createdAt: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
     };
 
-    setMessages(prev => [...prev, userMessage, assistantMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setIsConnecting(true);
 
@@ -139,9 +149,16 @@ export function useAiChat({
           // First event of any kind means we're no longer just connecting
           setIsConnecting(false);
           switch (event.type) {
-            case 'text':  appendTextToLast(event.text); break;
-            case 'part':  appendPartToLast(event.part); break;
+            case 'text':
+              ensureAssistantBubble();
+              appendTextToLast(event.text);
+              break;
+            case 'part':
+              ensureAssistantBubble();
+              appendPartToLast(event.part);
+              break;
             case 'error':
+              ensureAssistantBubble();
               appendPartToLast({ type: 'error', message: event.message });
               setError(event.message);
               break;
@@ -153,6 +170,7 @@ export function useAiChat({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(message);
+      ensureAssistantBubble();
       appendPartToLast({ type: 'error', message });
     } finally {
       setIsLoading(false);
