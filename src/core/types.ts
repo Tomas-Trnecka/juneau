@@ -32,7 +32,22 @@ export type AiErrorPart = {
   message: string;
 };
 
-export type AiMessagePart = AiTextPart | AiTablePart | AiProposalPart | AiErrorPart;
+export type AiActivityStatus = 'running' | 'done' | 'failed';
+
+export type AiActivityPart = {
+  type: 'activity';
+  /**
+   * Optional stable ID. If provided, a later activity part with the same ID
+   * will update the previous one in-place instead of appending a new row.
+   */
+  id?: string;
+  title: string;
+  description?: string;
+  status: AiActivityStatus;
+  metadata?: Record<string, unknown>;
+};
+
+export type AiMessagePart = AiTextPart | AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart;
 
 export type AiMessage = {
   id: string;
@@ -42,7 +57,7 @@ export type AiMessage = {
 };
 
 export type AiStreamTextEvent = { type: 'text'; text: string };
-export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiErrorPart };
+export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart };
 export type AiStreamDoneEvent = { type: 'done' };
 export type AiStreamErrorEvent = { type: 'error'; message: string };
 

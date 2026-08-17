@@ -1,9 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { JuneauProvider } from '../JuneauProvider/JuneauProvider';
+import { AiChatProvider } from '../../context/AiChatProvider';
 import { AiSidebar } from './AiSidebar';
 import { mockAdapter } from '../../adapters/mockAdapter';
 import { juneauCs } from '../../i18n/locales/cs';
 import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from '../../core/types';
+
+const withProvider = (adapter: AiBackendAdapter = mockAdapter) =>
+  (Story: React.ComponentType) => (
+    <AiChatProvider adapter={adapter}>
+      <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
+        <Story />
+      </div>
+    </AiChatProvider>
+  );
 
 const meta: Meta<typeof AiSidebar> = {
   title: 'Components/AiSidebar',
@@ -14,46 +24,32 @@ const meta: Meta<typeof AiSidebar> = {
     docs: {
       description: {
         component: `
-Top-level chat sidebar. Owns all chat state internally via \`useAiChat\` —
-pass an \`AiBackendAdapter\` and mount it, that's it.
-
-UI strings come from the nearest \`JuneauProvider\`. The optional \`title\` prop
-overrides only the header title for this specific instance; for app-wide
-language switching use \`labels\` on \`JuneauProvider\` instead.
+Top-level chat sidebar. Reads shared chat state from the nearest \`AiChatProvider\` —
+wrap your app once at the root and mount \`<AiSidebar />\` anywhere.
 
 \`\`\`tsx
-<JuneauProvider labels={juneauCs}>
-  <AiSidebar adapter={myAdapter} />
-</JuneauProvider>
+<AiChatProvider adapter={myAdapter}>
+  <App />          {/* sidebar can live in any nested layout */}
+  <AiSidebar />
+</AiChatProvider>
 \`\`\`
+
+Use \`setContext()\` from \`useAiChatContext()\` on each page to tell the AI where the user is.
         `.trim(),
       },
     },
   },
-  decorators: [
-    (Story) => (
-      <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
-        <Story />
-      </div>
-    ),
-  ],
-  argTypes: {
-    onProposalConfirm: { action: 'proposal confirmed' },
-    onProposalCancel: { action: 'proposal cancelled' },
-  },
+  decorators: [withProvider()],
 };
 
 export default meta;
 type Story = StoryObj<typeof AiSidebar>;
 
 export const Default: Story = {
-  args: {
-    adapter: mockAdapter,
-  },
   parameters: {
     docs: {
       description: {
-        story: 'Default English labels from `juneauEn`. Type a message — try "Show me monthly spend trend" or "What can you help me with?"',
+        story: 'Default English labels from `juneauEn`. Type a message — try "Show me data" or "What can you help me with?"',
       },
     },
   },
@@ -63,19 +59,18 @@ export const Czech: Story = {
   decorators: [
     (Story) => (
       <JuneauProvider labels={juneauCs}>
-        <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
-          <Story />
-        </div>
+        <AiChatProvider adapter={mockAdapter}>
+          <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
+            <Story />
+          </div>
+        </AiChatProvider>
       </JuneauProvider>
     ),
   ],
-  args: {
-    adapter: mockAdapter,
-  },
   parameters: {
     docs: {
       description: {
-        story: 'Same sidebar with `juneauCs` labels applied via a wrapping `JuneauProvider`. No props change on `AiSidebar` itself.',
+        story: 'Same sidebar with `juneauCs` labels applied via a wrapping `JuneauProvider`.',
       },
     },
   },
@@ -83,13 +78,12 @@ export const Czech: Story = {
 
 export const CustomTitle: Story = {
   args: {
-    adapter: mockAdapter,
     title: 'Analytics Copilot',
   },
   parameters: {
     docs: {
       description: {
-        story: 'The `title` prop overrides only the header label for this instance, without affecting other labels.',
+        story: 'The `title` prop overrides only the header label for this instance.',
       },
     },
   },
@@ -97,14 +91,22 @@ export const CustomTitle: Story = {
 
 export const WithApplicationContext: Story = {
   name: 'With Application Context',
-  args: {
-    adapter: mockAdapter,
-    context: { department: 'IT', fiscalYear: 2024, currency: 'CZK' },
-  },
+  decorators: [
+    (Story) => (
+      <AiChatProvider
+        adapter={mockAdapter}
+        context={{ department: 'IT', fiscalYear: 2024, currency: 'CZK' }}
+      >
+        <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
+          <Story />
+        </div>
+      </AiChatProvider>
+    ),
+  ],
   parameters: {
     docs: {
       description: {
-        story: 'The `context` prop is forwarded opaquely to every adapter call. Use it to pass the current page, entity ID, user role — anything the backend might need to tailor its response.',
+        story: 'The `context` prop on `AiChatProvider` is forwarded opaquely to every adapter call. Use it to pass current page, entity ID, user role — anything the backend might need.',
       },
     },
   },
@@ -117,13 +119,11 @@ const errorAdapter: AiBackendAdapter = {
 };
 
 export const ErrorState: Story = {
-  args: {
-    adapter: errorAdapter,
-  },
+  decorators: [withProvider(errorAdapter)],
   parameters: {
     docs: {
       description: {
-        story: 'When the adapter yields an `error` event the error banner appears above the input. The conversation is not cleared — the user can retry.',
+        story: 'When the adapter yields an `error` event the error banner appears above the input.',
       },
     },
   },

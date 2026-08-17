@@ -7,6 +7,8 @@ export type {
   AiTablePart as AiTablePartType,
   AiProposalPart,
   AiProposal,
+  AiActivityPart as AiActivityPartType,
+  AiActivityStatus,
   AiErrorPart,
   AiBackendAdapter,
   AiAdapterInput,
@@ -33,6 +35,9 @@ export type { UseAiChatOptions, UseAiChatReturn } from './hooks/useAiChat';
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export { JuneauProvider } from './components/JuneauProvider/JuneauProvider';
 export type { JuneauTheme } from './components/JuneauProvider/JuneauProvider';
+export { AiChatProvider } from './context/AiChatProvider';
+export { useAiChatContext } from './context/AiChatContext';
+export type { AiChatContextValue } from './context/AiChatContext';
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
 export type { JuneauLabels } from './i18n/types';
@@ -50,3 +55,4 @@ export { AiError } from './components/AiError/AiError';
 export { AiMessagePartRenderer } from './components/parts/AiMessagePartRenderer';
 export { AiTablePart } from './components/parts/AiTablePart';
 export { AiProposalCard } from './components/parts/AiProposalCard';
+export { AiActivityPart } from './components/parts/AiActivityPart';

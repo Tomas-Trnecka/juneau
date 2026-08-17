@@ -6,18 +6,20 @@ type IconProps = {
   'aria-hidden'?: boolean | 'true' | 'false';
 };
 
-export function IconBrain({ className, style, 'aria-hidden': ariaHidden = true }: IconProps) {
+export function IconWandMagicSparkles({ className, style, 'aria-hidden': ariaHidden = true }: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 576 512"
+      viewBox="0 0 640 512"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}
       aria-hidden={ariaHidden}
     >
-      {/* Font Awesome "brain" path (free solid, FA 6) */}
-      <path d="M248 0C181.4 0 128 53.4 128 120c0 23.3 6.6 45 18 63.4C122.4 205 112 231.3 112 260c0 49.5 27.7 92.7 68.6 114.7C173.2 386.3 168 398.6 168 412c0 38.7 27.5 70.9 64 78.3V496c0 8.8 7.2 16 16 16h80c8.8 0 16-7.2 16-16v-5.7c36.5-7.4 64-39.6 64-78.3 0-13.4-5.2-25.7-12.6-37.3C435.3 352.7 463 309.5 463 260c0-28.7-10.4-55-27-76.6 11.4-18.4 18-40.1 18-63.4C454 53.4 400.6 0 334 0c-21.4 0-41.4 5.9-58.5 16.2A119.7 119.7 0 0 0 248 0zm-8 168a24 24 0 1 1 0 48 24 24 0 1 1 0-48zm96 0a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM200 272a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zm128 24a24 24 0 1 1 0-48 24 24 0 1 1 0 48z" />
+      {/* Font Awesome "crow" solid (FA 6 free) — viewBox 0 0 640 512 */}
+      <path d="M456 0c-48.6 0-88 39.4-88 88l0 29.2L12.5 390.6c-14 10.8-16.6 30.9-5.9 44.9s30.9 16.6 44.9 5.9L126.1 384l133.1 0 46.6 113.1c5 12.3 19.1 18.1 31.3 13.1s18.1-19.1 13.1-31.3L311.1 384l40.9 0c1.1 0 2.1 0 3.2 0l46.6 113.2c5 12.3 19.1 18.1 31.3 13.1s18.1-19.1 13.1-31.3l-42-102C484.9 354.1 544 280 544 192l0-64 0-8 80.5-20.1c8.6-2.1 13.8-10.8 11.6-19.4C629 52 603.4 32 574 32l-50.1 0C507.7 12.5 483.3 0 456 0zm0 64a24 24 0 1 1 0 48 24 24 0 1 1 0-48z" />
     </svg>
   );
 }
@@ -27,6 +29,8 @@ export function IconPaperPlane({ className, style, 'aria-hidden': ariaHidden = t
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 512 512"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}
@@ -43,6 +47,8 @@ export function IconPaperclip({ className, style, 'aria-hidden': ariaHidden = tr
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 448 512"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}
@@ -59,6 +65,8 @@ export function IconBolt({ className, style, 'aria-hidden': ariaHidden = true }:
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 448 512"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}
@@ -75,6 +83,8 @@ export function IconPlus({ className, style, 'aria-hidden': ariaHidden = true }:
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 448 512"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}
@@ -91,6 +101,8 @@ export function IconClockRotateLeft({ className, style, 'aria-hidden': ariaHidde
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 512 512"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}
@@ -107,6 +119,8 @@ export function IconScroll({ className, style, 'aria-hidden': ariaHidden = true 
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 576 512"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}
@@ -118,11 +132,49 @@ export function IconScroll({ className, style, 'aria-hidden': ariaHidden = true 
   );
 }
 
+export function IconWindowMinimize({ className, style, 'aria-hidden': ariaHidden = true }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 512 512"
+      width="1em"
+      height="1em"
+      fill="currentColor"
+      className={className}
+      style={style}
+      aria-hidden={ariaHidden}
+    >
+      {/* Font Awesome "window-minimize" solid (FA 6 free) */}
+      <path d="M32 416c-17.7 0-32 14.3-32 32s14.3 32 32 32l448 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 416z" />
+    </svg>
+  );
+}
+
+export function IconWindowRestore({ className, style, 'aria-hidden': ariaHidden = true }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 512 512"
+      width="1em"
+      height="1em"
+      fill="currentColor"
+      className={className}
+      style={style}
+      aria-hidden={ariaHidden}
+    >
+      {/* Font Awesome "window-restore" solid (FA 6 free) */}
+      <path d="M432 64L208 64c-8.8 0-16 7.2-16 16l0 16-64 0 0-16c0-44.2 35.8-80 80-80L432 0c44.2 0 80 35.8 80 80l0 224c0 44.2-35.8 80-80 80l-16 0 0-64 16 0c8.8 0 16-7.2 16-16l0-224c0-8.8-7.2-16-16-16zM0 192c0-35.3 28.7-64 64-64l256 0c35.3 0 64 28.7 64 64l0 256c0 35.3-28.7 64-64 64L64 512c-35.3 0-64-28.7-64-64L0 192zm64 32c0 17.7 14.3 32 32 32l192 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L96 192c-17.7 0-32 14.3-32 32z" />
+    </svg>
+  );
+}
+
 export function IconArrowRotateLeft({ className, style, 'aria-hidden': ariaHidden = true }: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 512 512"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}
@@ -139,6 +191,8 @@ export function IconWarning({ className, style, 'aria-hidden': ariaHidden = true
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 20 20"
+      width="1em"
+      height="1em"
       fill="currentColor"
       className={className}
       style={style}

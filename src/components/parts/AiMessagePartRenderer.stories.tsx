@@ -17,6 +17,7 @@ This is the extension point for custom part types — swap in your own renderer 
 | \`text\` | Inline \`<span>\` with \`white-space: pre-wrap\` |
 | \`table\` | \`AiTablePart\` |
 | \`proposal\` | \`AiProposalCard\` |
+| \`activity\` | \`AiActivityPart\` |
 | \`error\` | Inline error span |
         `.trim(),
       },
@@ -88,6 +89,48 @@ export const Proposal: Story = {
 export const Error: Story = {
   args: {
     part: { type: 'error', message: 'Failed to load data from the backend.' },
+    onProposalConfirm: () => {},
+    onProposalCancel: () => {},
+  },
+};
+
+export const ActivityRunning: Story = {
+  args: {
+    part: {
+      type: 'activity',
+      id: 'search-document',
+      title: 'Searching document',
+      description: 'Looking up document by ID.',
+      status: 'running',
+    },
+    onProposalConfirm: () => {},
+    onProposalCancel: () => {},
+  },
+};
+
+export const ActivityDone: Story = {
+  args: {
+    part: {
+      type: 'activity',
+      id: 'search-document',
+      title: 'Document found',
+      description: 'Found document INV-2024-0894.',
+      status: 'done',
+    },
+    onProposalConfirm: () => {},
+    onProposalCancel: () => {},
+  },
+};
+
+export const ActivityFailed: Story = {
+  args: {
+    part: {
+      type: 'activity',
+      id: 'search-document',
+      title: 'Document search failed',
+      description: 'The backend tool returned an error.',
+      status: 'failed',
+    },
     onProposalConfirm: () => {},
     onProposalCancel: () => {},
   },

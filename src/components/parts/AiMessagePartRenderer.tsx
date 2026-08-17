@@ -4,6 +4,7 @@ import type { AiMessagePart } from '../../core/types';
 import { IconWarning } from '../icons';
 import { AiTablePart } from './AiTablePart';
 import { AiProposalCard } from './AiProposalCard';
+import { AiActivityPart } from './AiActivityPart';
 import styles from './AiMessagePartRenderer.module.css';
 
 type Props = {
@@ -23,6 +24,8 @@ export function AiMessagePartRenderer({ part, onProposalConfirm, onProposalCance
       );
     case 'table':
       return <AiTablePart part={part} />;
+    case 'activity':
+      return <AiActivityPart part={part} />;
     case 'proposal':
       return (
         <AiProposalCard

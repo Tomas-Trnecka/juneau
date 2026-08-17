@@ -3,13 +3,16 @@
 React component library for building AI chat interfaces. Streaming-first, adapter-based, fully themeable.
 
 ```tsx
-import { JuneauProvider, AiSidebar, createSseAdapter } from 'juneau';
+import { JuneauProvider, AiChatProvider, AiSidebar, createSseAdapter } from 'juneau';
 import 'juneau/dist/style.css';
 
 const adapter = createSseAdapter('/api/chat');
 
 <JuneauProvider>
-  <AiSidebar adapter={adapter} />
+  <AiChatProvider adapter={adapter}>
+    <App />
+    <AiSidebar />
+  </AiChatProvider>
 </JuneauProvider>
 ```
 
@@ -41,10 +44,10 @@ It receives the conversation history and streams back typed events:
 
 ```ts
 type AiStreamEvent =
-  | { type: 'text';  text: string }    // streamed text chunk — append to current bubble
-  | { type: 'part';  part: AiTablePart | AiProposalPart | AiErrorPart } // rich UI block
-  | { type: 'done' }                   // stream finished cleanly
-  | { type: 'error'; message: string } // stream failed
+  | { type: 'text';  text: string }       // streamed text chunk — append to current bubble
+  | { type: 'part';  part: AiMessagePart } // rich UI block (table, proposal, activity, error)
+  | { type: 'done' }                       // stream finished cleanly
+  | { type: 'error'; message: string }     // stream failed
 ```
 
 This means your API keys stay on your backend, you control auth, rate limiting, model selection — Juneau just renders whatever comes back.
@@ -187,22 +190,23 @@ Shipped for local development. No backend needed — responds to keywords in the
 |---|---|
 | `"show"`, `"list"`, `"data"`, `"table"` | A rendered data table |
 | `"suggest"`, `"recommend"`, `"proposal"` | A proposal card with confirm/cancel |
+| `"activity"`, `"progress"`, `"document"` | An activity timeline with running/done states |
 | `"help"`, `"what can you do"` | Capability overview |
 | `"error"`, `"fail"` | Simulated error response |
 | anything else | Explains the available triggers |
 
 ```ts
 import { mockAdapter } from 'juneau';
-<AiSidebar adapter={mockAdapter} />
+// Pass to AiChatProvider — see below
 ```
 
 ---
 
-## Components
+## Providers
 
 ### `<JuneauProvider>`
 
-Wrap your app (or any subtree) once. Provides theme tokens and UI labels to all Juneau components below it.
+Wrap your app once. Provides theme tokens and UI labels to all Juneau components below it.
 
 ```tsx
 import { JuneauProvider, juneauCs } from 'juneau';
@@ -224,28 +228,75 @@ import { JuneauProvider, juneauCs } from 'juneau';
 
 ---
 
-### `<AiSidebar>`
+### `<AiChatProvider>`
 
-The fastest path to a working chat UI. Self-contained — manages its own state internally via `useAiChat`.
+Holds the shared conversation state. Wrap your app (or layout) once — any page can then render `<AiSidebar />` without losing conversation history on navigation.
 
 ```tsx
-<AiSidebar
-  adapter={adapter}
-  title="AI Assistant"
+import { AiChatProvider } from 'juneau';
+
+<AiChatProvider
+  adapter={myAdapter}
   onProposalConfirm={(id, payload) => handleAction(id, payload)}
-/>
+  onProposalCancel={(id) => handleDismiss(id)}
+>
+  <App />
+</AiChatProvider>
 ```
 
 | Prop | Type | Description |
 |---|---|---|
 | `adapter` | `AiBackendAdapter` | **Required.** Your adapter. |
-| `title` | `string` | Overrides the `sidebarTitle` label for this instance. |
-| `context` | `Record<string, unknown>` | Passed through to every `adapter.sendMessage` call. Useful for page-level context (current entity ID, user role, etc). |
-| `icon` | `ReactNode` | Override the header + avatar icon. Defaults to a brain icon. |
-| `actions` | `AiInputAction[]` | Toolbar buttons left of send. Pass `[]` to hide entirely. |
-| `sendIcon` | `ReactNode` | Override the send button icon. |
+| `context` | `Record<string, unknown>` | Initial context forwarded to every adapter call. Update per-page via `setContext()`. |
 | `onProposalConfirm` | `(id, payload) => void` | Called when user confirms a proposal card. |
 | `onProposalCancel` | `(id) => void` | Called when user cancels a proposal card. |
+
+**Updating context per page:**
+
+Use `setContext()` from `useAiChatContext()` to tell the AI where the user is on each page. The context is forwarded opaquely to every `adapter.sendMessage` call as `input.context`.
+
+```tsx
+import { useAiChatContext } from 'juneau';
+
+function InvoicesPage() {
+  const { setContext } = useAiChatContext();
+
+  useEffect(() => {
+    setContext({
+      page: 'invoices',
+      availableTools: ['search', 'export'],
+      userRole: 'admin',
+    });
+  }, []);
+
+  return <main>...</main>;
+}
+```
+
+---
+
+## Components
+
+### `<AiSidebar>`
+
+Fixed-position chat panel. Reads all state from the nearest `<AiChatProvider>` — renders wherever you place it, conversation persists across navigation.
+
+The sidebar anchors to the bottom-right of the viewport and opens at 60% screen height by default. Users can minimize it to a compact header bar.
+
+```tsx
+<AiSidebar
+  title="AI Assistant"
+  height="70vh"
+/>
+```
+
+| Prop | Type | Description |
+|---|---|---|
+| `title` | `string` | Overrides the `sidebarTitle` label for this instance. |
+| `icon` | `ReactNode` | Override the header + avatar icon. Defaults to a wand icon. |
+| `actions` | `AiInputAction[]` | Toolbar buttons left of send. Pass `[]` to hide entirely. |
+| `sendIcon` | `ReactNode` | Override the send button icon. |
+| `height` | `string` | Height when open. Any CSS value. Defaults to `'60vh'`. |
 | `className` | `string` | Added to the `<aside>` element. |
 | `style` | `CSSProperties` | Inline styles on the `<aside>`. |
 
@@ -314,6 +365,7 @@ const {
   sendGreeting,        // (contextHint: string) => Promise<void> — assistant speaks first, no user bubble shown
   stop,                // () => void — abort in-flight stream, keep existing messages
   isLoading,           // boolean — true while streaming
+  isConnecting,        // boolean — true from send until first token arrives
   error,               // string | null — last error, cleared on next send
   reset,               // () => void — clear all messages and abort any stream
   confirmProposal,     // (id: string, payload: unknown) => void
@@ -326,6 +378,21 @@ const {
 });
 ```
 
+## `useAiChatContext` hook
+
+Reads the shared state from `<AiChatProvider>`. Includes everything from `useAiChat` plus `setContext()`.
+
+```ts
+const {
+  // all useAiChat fields +
+  setContext,  // (ctx: Record<string, unknown>) => void — update context forwarded to adapter
+} = useAiChatContext();
+```
+
+Throws a descriptive error if called outside `<AiChatProvider>`.
+
+---
+
 ### Useful patterns
 
 **Proactive greeting on mount (`sendGreeting`):**
@@ -333,49 +400,29 @@ const {
 `sendGreeting(hint)` sends the hint as a `system` role message to the adapter and streams the response as an assistant-only message — no user bubble is added to the conversation. Perfect for page-load summaries where the AI speaks first.
 
 ```ts
-// In your component:
-const chat = useAiChat({ adapter });
+const { sendGreeting } = useAiChatContext();
 
 useEffect(() => {
-  chat.sendGreeting(
+  sendGreeting(
     'The user is viewing the Invoices page. ' +
     'Briefly introduce what you can help with on this page.'
   );
 }, []);
 ```
 
-The hint arrives in your adapter as `input.messages[0]` with `role: 'system'`:
-
-```ts
-// In your adapter:
-async *sendMessage({ messages }) {
-  const systemMsg = messages.find(m => m.role === 'system');
-  const hint = systemMsg ? getMessageText(systemMsg) : '';
-  // → "The user is viewing the Invoices page. Briefly introduce…"
-
-  // Forward to your backend / OpenAI system prompt:
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    body: JSON.stringify({
-      messages: [{ role: 'system', content: hint }],
-      stream: true,
-    }),
-  });
-  // …stream response
-}
-```
-
 **Trigger from outside the chat (e.g. clicking a data row):**
 ```ts
-chat.sendMessageWithText(`Summarise order #${order.id} for me`);
+const { sendMessageWithText } = useAiChatContext();
+sendMessageWithText(`Summarise order #${order.id} for me`);
 ```
 
 **Pass page context to every request:**
 ```tsx
-<AiSidebar
-  adapter={adapter}
-  context={{ pageId: 'invoices', entityId: invoice.id, userRole: 'admin' }}
-/>
+const { setContext } = useAiChatContext();
+
+useEffect(() => {
+  setContext({ pageId: 'invoices', entityId: invoice.id, userRole: 'admin' });
+}, [invoice.id]);
 ```
 
 The `context` object lands in `input.context` inside every `adapter.sendMessage` call — use it to inject page-level data without polluting the message history.
@@ -438,7 +485,40 @@ Assistant messages are composed of typed **parts**. Text is streamed chunk by ch
 | `text` | `{ type: 'text', text: string }` stream events, accumulated | Markdown via `react-markdown` — safe against XSS |
 | `table` | `{ type: 'part', part: { type: 'table', ... } }` | `AiTablePart` |
 | `proposal` | `{ type: 'part', part: { type: 'proposal', ... } }` | `AiProposalCard` |
+| `activity` | `{ type: 'part', part: { type: 'activity', ... } }` | `AiActivityPart` |
 | `error` | `{ type: 'error', message: string }` or `{ type: 'part', part: { type: 'error', ... } }` | Inline error in bubble |
+
+**Emitting an activity from your adapter:**
+
+Activity parts show the user what the AI is doing while it works — skill selection, document search, tool calls, etc. They have three states: `running`, `done`, `failed`.
+
+```ts
+// Show a running activity
+yield {
+  type: 'part',
+  part: {
+    type: 'activity',
+    id: 'doc-search',           // optional stable ID — enables in-place update
+    title: 'Searching document',
+    description: 'Looking up document by ID.',
+    status: 'running',
+  },
+};
+
+// Later: update the same activity in-place (same id)
+yield {
+  type: 'part',
+  part: {
+    type: 'activity',
+    id: 'doc-search',
+    title: 'Document found',
+    description: 'Found document INV-2024-0894.',
+    status: 'done',
+  },
+};
+```
+
+If `id` is provided, a later activity part with the same `id` updates the previous one in-place instead of appending a new row. Without `id`, activity parts append as a timeline.
 
 **Emitting a proposal from your adapter:**
 ```ts
@@ -537,7 +617,8 @@ Pass any `Partial<JuneauLabels>` — omitted keys fall back to English:
 | Key | Default (EN) | Used in |
 |---|---|---|
 | `sidebarTitle` | `AI Assistant` | `AiChatHeader` title |
-| `clearConversation` | `Clear conversation` | `AiChatHeader` reset button |
+| `minimizeSidebar` | `Minimize` | `AiChatHeader` minimize button |
+| `expandSidebar` | `Expand` | `AiChatHeader` expand button (when minimized) |
 | `inputPlaceholder` | `Ask a question… (Enter to send)` | `AiInput` textarea |
 | `sendMessage` | `Send message` | `AiInput` send button |
 | `stopMessage` | `Stop` | `AiInput` stop button (while streaming) |
@@ -560,7 +641,6 @@ The toolbar buttons left of the send button are fully configurable:
 
 ```tsx
 <AiSidebar
-  adapter={adapter}
   actions={[
     {
       icon: <MyAttachIcon />,
@@ -576,7 +656,7 @@ The toolbar buttons left of the send button are fully configurable:
 />
 
 // Hide the toolbar entirely:
-<AiSidebar adapter={adapter} actions={[]} />
+<AiSidebar actions={[]} />
 ```
 
 Each action: `{ icon: ReactNode, label: string, onClick?: () => void }`
@@ -594,3 +674,11 @@ Each action: `{ icon: ReactNode, label: string, onClick?: () => void }`
 ## License
 
 MIT
+
+---
+
+## Icon attribution
+
+Icons used internally by Juneau are from [Font Awesome Free](https://fontawesome.com) (v6), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). SVG paths are inlined directly — no runtime dependency on the Font Awesome package.
+
+Icons used: `crow`, `paper-plane`, `paperclip`, `bolt`, `plus`, `clock-rotate-left`, `scroll`, `arrow-rotate-left`, `window-minimize`, `window-restore`.

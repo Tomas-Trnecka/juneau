@@ -1,0 +1,53 @@
+.activity {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  margin: 4px 0;
+  border: 1px solid var(--juneau-color-border);
+  border-radius: var(--juneau-radius-md);
+  background: var(--juneau-color-surface-raised);
+  font-size: var(--juneau-font-size-sm);
+}
+
+.indicator {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: var(--juneau-radius-full);
+  background: var(--juneau-color-text-faint);
+  flex-shrink: 0;
+  transition: background var(--juneau-transition-fast);
+}
+
+.activity[data-status='running'] .indicator {
+  background: var(--juneau-color-accent);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.activity[data-status='done'] .indicator {
+  background: var(--juneau-color-success-text);
+}
+
+.activity[data-status='failed'] .indicator {
+  background: var(--juneau-color-error-text);
+}
+
+.content {
+  min-width: 0;
+}
+
+.title {
+  font-weight: 500;
+  color: var(--juneau-color-text-secondary);
+}
+
+.description {
+  margin-top: 1px;
+  color: var(--juneau-color-text-faint);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { JuneauProvider } from '../components/JuneauProvider/JuneauProvider';
+import { AiChatProvider } from '../context/AiChatProvider';
+import { mockAdapter } from '../adapters/mockAdapter';
 import { juneauCs } from '../i18n/locales/cs';
 import { DashboardView } from './views/DashboardView';
 import { SidebarView } from './views/SidebarView';
@@ -18,36 +20,48 @@ export function DemoApp() {
 
   return (
     <JuneauProvider labels={juneauCs}>
-      <div className="demo-layout">
-        <header className="demo-header">
-          <span className="demo-title">Company Analytics</span>
-          <nav className="demo-nav">
-            <button
-              className={`demo-nav-btn ${view === 'dashboard' ? 'demo-nav-btn--active' : ''}`}
-              onClick={() => setView('dashboard')}
-            >
-              AI Dashboard
-            </button>
-            <button
-              className={`demo-nav-btn ${view === 'sidebar' ? 'demo-nav-btn--active' : ''}`}
-              onClick={() => setView('sidebar')}
-            >
-              Sidebar Assistant
-            </button>
-          </nav>
-        </header>
+      <AiChatProvider
+        adapter={mockAdapter}
+        onProposalConfirm={(id, payload) => {
+          console.log('Confirmed:', id, payload);
+          addToast(`Report scheduled: ${id}`);
+        }}
+        onProposalCancel={(id) => {
+          console.log('Cancelled:', id);
+          addToast(`Proposal dismissed: ${id}`);
+        }}
+      >
+        <div className="demo-layout">
+          <header className="demo-header">
+            <span className="demo-title">Company Analytics</span>
+            <nav className="demo-nav">
+              <button
+                className={`demo-nav-btn ${view === 'dashboard' ? 'demo-nav-btn--active' : ''}`}
+                onClick={() => setView('dashboard')}
+              >
+                AI Dashboard
+              </button>
+              <button
+                className={`demo-nav-btn ${view === 'sidebar' ? 'demo-nav-btn--active' : ''}`}
+                onClick={() => setView('sidebar')}
+              >
+                Sidebar Assistant
+              </button>
+            </nav>
+          </header>
 
-        <main className="demo-content">
-          {view === 'dashboard' && <DashboardView />}
-          {view === 'sidebar'   && <SidebarView onToast={addToast} />}
-        </main>
+          <main className="demo-content">
+            {view === 'dashboard' && <DashboardView />}
+            {view === 'sidebar'   && <SidebarView />}
+          </main>
 
-        <div className="demo-toasts">
-          {toasts.map((t, i) => (
-            <div key={i} className="demo-toast">{t}</div>
-          ))}
+          <div className="demo-toasts">
+            {toasts.map((t, i) => (
+              <div key={i} className="demo-toast">{t}</div>
+            ))}
+          </div>
         </div>
-      </div>
+      </AiChatProvider>
     </JuneauProvider>
   );
 }

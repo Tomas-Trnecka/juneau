@@ -27,8 +27,8 @@
 }
 
 .resetBtn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  border: none;
   border-radius: var(--juneau-radius-sm);
   color: var(--juneau-color-text-inverse);
   width: 26px;
@@ -38,9 +38,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--juneau-transition-fast);
+  opacity: 0.7;
+  transition: background-color var(--juneau-transition-fast), opacity var(--juneau-transition-fast);
 }
 
 .resetBtn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  opacity: 1;
 }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+

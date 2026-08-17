@@ -1,44 +1,43 @@
 import type { CSSProperties, ReactNode } from 'react';
-import type { AiBackendAdapter } from '../../core/types';
+import { useState } from 'react';
+import { useAiChatContext } from '../../context/AiChatContext';
 import type { AiInputAction } from '../AiInput/AiInput';
-import { useAiChat } from '../../hooks/useAiChat';
 import { AiChat } from '../AiChat/AiChat';
 import { AiChatHeader } from '../AiChatHeader/AiChatHeader';
 import styles from './AiSidebar.module.css';
 
 type Props = {
-  adapter: AiBackendAdapter;
   /** Overrides the `sidebarTitle` label for this instance only. */
   title?: string;
-  context?: Record<string, unknown>;
-  onProposalConfirm?: (proposalId: string, payload: unknown) => void;
-  onProposalCancel?: (proposalId: string) => void;
-  /** Override the header and assistant avatar icon. Defaults to a brain icon. */
+  /** Override the header and assistant avatar icon. Defaults to a wand icon. */
   icon?: ReactNode;
   /**
    * Toolbar action buttons rendered left of the send button.
    * Pass an empty array to hide the toolbar entirely.
-   * Defaults to five built-in actions (attach, quick actions, new, history, rules).
    */
   actions?: AiInputAction[];
   /** Override the send button icon. Defaults to a paper-plane icon. */
   sendIcon?: ReactNode;
+  /**
+   * Height of the sidebar when open. Any valid CSS value.
+   * Defaults to '60vh'.
+   */
+  height?: string;
   className?: string;
   style?: CSSProperties;
 };
 
 export function AiSidebar({
-  adapter,
   title,
-  context,
-  onProposalConfirm,
-  onProposalCancel,
   icon,
   actions,
   sendIcon,
+  height = '60vh',
   className,
   style,
 }: Props) {
+  const [isMinimized, setIsMinimized] = useState(false);
+
   const {
     messages,
     input,
@@ -48,43 +47,39 @@ export function AiSidebar({
     isLoading,
     isConnecting,
     error,
-    reset,
     confirmProposal,
     cancelProposal,
-  } = useAiChat({ adapter, context, onProposalConfirm, onProposalCancel });
-
-  // confirmProposal / cancelProposal already call the onProposal* callbacks internally —
-  // don't call them again here or they fire twice.
-  const handleConfirm = (proposalId: string, payload: unknown) => {
-    confirmProposal(proposalId, payload);
-  };
-
-  const handleCancel = (proposalId: string) => {
-    cancelProposal(proposalId);
-  };
+  } = useAiChatContext();
 
   return (
     <aside
-      className={[styles.sidebar, className].filter(Boolean).join(' ')}
-      style={style}
+      className={[styles.sidebar, isMinimized ? styles.minimized : '', className].filter(Boolean).join(' ')}
+      style={{ height: isMinimized ? undefined : height, ...style }}
     >
-      <AiChatHeader title={title} onReset={reset} icon={icon} />
-
-      <AiChat
-        messages={messages}
-        input={input}
-        isLoading={isLoading}
-        isConnecting={isConnecting}
-        error={error}
-        onInputChange={setInput}
-        onSend={sendMessage}
-        onStop={stop}
-        onProposalConfirm={handleConfirm}
-        onProposalCancel={handleCancel}
-        assistantIcon={icon}
-        actions={actions}
-        sendIcon={sendIcon}
+      <AiChatHeader
+        title={title}
+        icon={icon}
+        onMinimize={() => setIsMinimized(v => !v)}
+        isMinimized={isMinimized}
       />
+
+      {!isMinimized && (
+        <AiChat
+          messages={messages}
+          input={input}
+          isLoading={isLoading}
+          isConnecting={isConnecting}
+          error={error}
+          onInputChange={setInput}
+          onSend={sendMessage}
+          onStop={stop}
+          onProposalConfirm={confirmProposal}
+          onProposalCancel={cancelProposal}
+          assistantIcon={icon}
+          actions={actions}
+          sendIcon={sendIcon}
+        />
+      )}
     </aside>
   );
 }

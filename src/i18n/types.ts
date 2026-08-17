@@ -8,6 +8,8 @@ export type JuneauLabels = {
   // AiSidebar
   sidebarTitle: string;
   clearConversation: string;
+  minimizeSidebar: string;
+  expandSidebar: string;
 
   // AiInput
   inputPlaceholder: string;

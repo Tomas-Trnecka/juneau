@@ -12,7 +12,9 @@ export const mockAdapter: AiBackendAdapter = {
     const text = lastUserMessage?.parts.find(p => p.type === 'text');
     const query = text?.type === 'text' ? text.text.toLowerCase() : '';
 
-    if (query.includes('table') || query.includes('data') || query.includes('list') || query.includes('show')) {
+    if (query.includes('activity') || query.includes('progress') || query.includes('document') || query.includes('dokument')) {
+      yield* scenarioActivity();
+    } else if (query.includes('table') || query.includes('data') || query.includes('list') || query.includes('show')) {
       yield* scenarioTable();
     } else if (query.includes('proposal') || query.includes('suggest') || query.includes('recommend')) {
       yield* scenarioProposal();
@@ -25,6 +27,63 @@ export const mockAdapter: AiBackendAdapter = {
     }
   }
 };
+
+async function* scenarioActivity(): AsyncIterable<AiStreamEvent> {
+  yield {
+    type: 'part',
+    part: {
+      type: 'activity',
+      id: 'select-skill',
+      title: 'Selecting skill',
+      description: 'Looking for the best skill for this request.',
+      status: 'running',
+    },
+  };
+
+  await delay(700);
+
+  yield {
+    type: 'part',
+    part: {
+      type: 'activity',
+      id: 'select-skill',
+      title: 'Skill selected',
+      description: 'Using Document Search.',
+      status: 'done',
+    },
+  };
+
+  await delay(300);
+
+  yield {
+    type: 'part',
+    part: {
+      type: 'activity',
+      id: 'search-document',
+      title: 'Searching document',
+      description: 'Looking up document by ID.',
+      status: 'running',
+    },
+  };
+
+  await delay(900);
+
+  yield {
+    type: 'part',
+    part: {
+      type: 'activity',
+      id: 'search-document',
+      title: 'Document found',
+      description: 'Found document INV-2024-0894.',
+      status: 'done',
+    },
+  };
+
+  await delay(300);
+
+  yield* streamText('\nFound document **INV-2024-0894** from **DataSys a.s.** for **CZK 390 000**.', 25);
+  yield { type: 'done' };
+}
 
 async function* scenarioTable(): AsyncIterable<AiStreamEvent> {
   yield* streamText('Here is a summary of the data you requested:\n\n', 30);

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { JuneauProvider } from './JuneauProvider';
+import { AiChatProvider } from '../../context/AiChatProvider';
 import { AiSidebar } from '../AiSidebar/AiSidebar';
 import { AiProposalCard } from '../parts/AiProposalCard';
 import { mockAdapter } from '../../adapters/mockAdapter';
@@ -203,9 +204,11 @@ export const LiveSidebarCzech: Story = {
   },
   render: () => (
     <JuneauProvider labels={juneauCs}>
-      <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
-        <AiSidebar adapter={mockAdapter} />
-      </div>
+      <AiChatProvider adapter={mockAdapter}>
+        <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
+          <AiSidebar />
+        </div>
+      </AiChatProvider>
     </JuneauProvider>
   ),
 };
@@ -224,9 +227,11 @@ export const LiveSidebarTealCzech: Story = {
       labels={juneauCs}
       theme={{ colorPrimary: '#0f766e', colorPrimaryDark: '#0d9488', colorAccent: '#14b8a6', colorAccentDark: '#0d9488', colorAccentLight: '#f0fdfa', colorAccentBorder: '#99f6e4' }}
     >
-      <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
-        <AiSidebar adapter={mockAdapter} />
-      </div>
+      <AiChatProvider adapter={mockAdapter}>
+        <div style={{ display: 'flex', height: '100vh', justifyContent: 'flex-end', backgroundColor: 'var(--juneau-color-surface-raised)' }}>
+          <AiSidebar />
+        </div>
+      </AiChatProvider>
     </JuneauProvider>
   ),
 };

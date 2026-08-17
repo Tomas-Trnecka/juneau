@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { IconBrain } from '../icons';
+import { IconWandMagicSparkles } from '../icons';
 import type { AiMessage } from '../../core/types';
 import { AiMessagePartRenderer } from '../parts/AiMessagePartRenderer';
 import styles from './AiMessageBubble.module.css';
@@ -19,7 +19,7 @@ export function AiMessageBubble({ message, onProposalConfirm, onProposalCancel, 
     <div className={`${styles.wrapper} ${isUser ? styles.user : styles.assistant}`}>
       {!isUser && (
         <div className={styles.avatar} aria-hidden="true">
-          {assistantIcon ?? <IconBrain />}
+          {assistantIcon ?? <IconWandMagicSparkles />}
         </div>
       )}
       <div className={styles.bubble}>

@@ -67,6 +67,19 @@ export function useAiChat({
     setMessages(prev => {
       const last = prev[prev.length - 1];
       if (!last || last.role !== 'assistant') return prev;
+
+      // Activity parts with a stable id upsert in-place instead of appending
+      if (part.type === 'activity' && part.id) {
+        const parts = [...last.parts];
+        const existingIndex = parts.findIndex(
+          p => p.type === 'activity' && p.id === part.id
+        );
+        if (existingIndex !== -1) {
+          parts[existingIndex] = part;
+          return [...prev.slice(0, -1), { ...last, parts }];
+        }
+      }
+
       return [
         ...prev.slice(0, -1),
         { ...last, parts: [...last.parts, part] }

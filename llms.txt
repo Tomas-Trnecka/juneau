@@ -1,387 +1,146 @@
-# Juneau — LLM Reference
+# Juneau
 
-React component library for AI chat interfaces. Streaming-first, adapter-based, themeable.
-Package: `juneau` | CSS: `import 'juneau/dist/style.css'`
+React component library for building AI chat interfaces. Streaming-first, adapter-based, fully themeable. No AI API calls — the consumer owns the network layer via an adapter.
 
----
+## Architecture
 
-## QUICKSTART
+Two providers wrap the app:
+- `JuneauProvider` — theme tokens + UI labels (i18n)
+- `AiChatProvider` — holds conversation state (messages, input, loading), accepts the adapter
 
-```tsx
-import { JuneauProvider, AiSidebar, createSseAdapter } from 'juneau';
-import 'juneau/dist/style.css';
+`AiSidebar` reads state from `AiChatProvider` via context. Conversation persists across page navigation. Pages update AI context per-route via `setContext()`.
 
-// Point at your SSE-streaming backend endpoint
-const adapter = createSseAdapter('/api/chat');
+## Providers
 
-export function App() {
-  return (
-    <JuneauProvider>
-      <AiSidebar adapter={adapter} />
-    </JuneauProvider>
-  );
+### JuneauProvider
+Props: `theme?: JuneauTheme`, `labels?: Partial<JuneauLabels>`, `className?`, `style?`
+Provides CSS token overrides and UI string overrides to all Juneau components in the subtree.
+
+### AiChatProvider
+Props: `adapter: AiBackendAdapter`, `context?: Record<string, unknown>`, `onProposalConfirm?`, `onProposalCancel?`, `children`
+Holds shared useAiChat state. Wrap once at app/layout root. One provider = one persistent conversation.
+
+## Hooks
+
+### useAiChatContext()
+Returns all useAiChat fields plus `setContext(ctx)`. Must be inside AiChatProvider.
+Use `setContext()` on each page to pass current page, available tools, entity IDs, etc. to the adapter.
+
+### useAiChat(options)
+Low-level hook for custom UIs. Options: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`
+Returns: `messages`, `input`, `setInput`, `sendMessage`, `sendMessageWithText`, `sendGreeting`, `stop`, `isLoading`, `isConnecting`, `error`, `reset`, `confirmProposal`, `cancelProposal`
+
+## Components
+
+### AiSidebar
+Fixed-position overlay panel, bottom-right, reads from AiChatProvider.
+Props: `title?`, `icon?`, `actions?`, `sendIcon?`, `height?` (default: '60vh'), `className?`, `style?`
+Has minimize/restore button. Minimized = compact header bar at bottom-right. Animated transition.
+
+### AiChat
+Headless chat body (message list + input + error). Requires explicit props from useAiChat.
+Use when embedding chat in a custom layout instead of using AiSidebar.
+
+### AiChatHeader
+Props: `title?`, `icon?`, `onMinimize?`, `isMinimized?`
+
+### AiInput
+Props: `value`, `onChange`, `onSend`, `onStop?`, `isLoading`, `placeholder?`, `actions?`, `sendIcon?`
+
+### AiMessageList
+Props: `messages`, `isLoading`, `isConnecting`, `onProposalConfirm`, `onProposalCancel`, `assistantIcon?`
+
+### AiMessageBubble
+Props: `message`, `onProposalConfirm`, `onProposalCancel`, `assistantIcon?`
+
+### AiMessagePartRenderer
+Dispatches AiMessagePart to the correct renderer. Part types: text, table, proposal, activity, error.
+
+### AiActivityPart
+Renders an activity item (running/done/failed). Subtle UI — not a main response, shows AI progress.
+Running state has a pulsing pink dot. Done = green dot. Failed = red dot.
+
+### AiTablePart
+Renders a data table from columns + rows.
+
+### AiProposalCard
+Renders a confirm/cancel card. Calls onProposalConfirm(id, payload) or onProposalCancel(id).
+
+### AiTypingIndicator
+Shows animated dots while streaming or connecting.
+
+### AiError
+Dismissable error banner.
+
+## Stream event types
+
+```
+AiStreamEvent =
+  | { type: 'text'; text: string }
+  | { type: 'part'; part: AiMessagePart }
+  | { type: 'done' }
+  | { type: 'error'; message: string }
+```
+
+## Message part types
+
+```
+AiMessagePart =
+  | { type: 'text'; text: string }
+  | { type: 'table'; columns: string[]; rows: Record<string, unknown>[] }
+  | { type: 'proposal'; proposal: AiProposal }
+  | { type: 'activity'; id?: string; title: string; description?: string; status: 'running' | 'done' | 'failed'; metadata?: Record<string, unknown> }
+  | { type: 'error'; message: string }
+```
+
+Activity parts with a stable `id` update in-place when a new part with the same `id` arrives. Without `id`, they append as a timeline.
+
+## Adapter interface
+
+```ts
+interface AiBackendAdapter {
+  sendMessage(input: AiAdapterInput): AsyncIterable<AiStreamEvent>;
 }
-```
 
-That's the minimum. Everything below is optional customisation.
-
----
-
-## ADAPTER — THE ONLY REQUIRED CONCEPT
-
-Juneau never calls AI APIs. You provide an adapter. Three options:
-
-### Option 1 — createSseAdapter (recommended, covers OpenAI/Anthropic proxies)
-
-```ts
-import { createSseAdapter } from 'juneau';
-
-const adapter = createSseAdapter('/api/chat');
-
-// With auth:
-const adapter = createSseAdapter('/api/chat', {
-  getHeaders: async () => ({ Authorization: `Bearer ${await getToken()}` }),
-});
-
-// With custom body:
-const adapter = createSseAdapter('/api/chat', {
-  getBody: ({ messages, context }) => ({ messages, model: 'gpt-4o', stream: true }),
-});
-
-// With custom SSE parser (if backend doesn't use OpenAI format):
-const adapter = createSseAdapter('/api/chat', {
-  parseEvent: (data) => {
-    try {
-      const json = JSON.parse(data);
-      return json.text ? [{ type: 'text', text: json.text }] : [];
-    } catch { return []; }
-  },
-});
-```
-
-Default `parseEvent` reads OpenAI's `choices[0].delta.content` format automatically.
-
-### Option 2 — createFetchStreamAdapter (NDJSON / raw chunked backends)
-
-```ts
-import { createFetchStreamAdapter } from 'juneau';
-
-// Default: expects newline-delimited { text: "..." } or { done: true } JSON
-const adapter = createFetchStreamAdapter('/api/chat');
-
-// Plain text chunks:
-const adapter = createFetchStreamAdapter('/api/chat', {
-  parseChunk: (chunk) => chunk ? [{ type: 'text', text: chunk }] : [],
-});
-```
-
-### Option 3 — Custom adapter (implement the interface directly)
-
-```ts
-import type { AiBackendAdapter } from 'juneau';
-
-const adapter: AiBackendAdapter = {
-  async *sendMessage({ messages, context }) {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      body: JSON.stringify({ messages }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const reader = res.body!.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      yield { type: 'text', text: decoder.decode(value) };
-    }
-    yield { type: 'done' };
-  },
+type AiAdapterInput = {
+  messages: AiMessage[];
+  context?: Record<string, unknown>;
 };
 ```
 
-### Stream events the adapter yields
+## Built-in adapters
 
-```ts
-type AiStreamEvent =
-  | { type: 'text';  text: string }                                      // text chunk, accumulated into bubble
-  | { type: 'part';  part: AiTablePart | AiProposalPart | AiErrorPart }  // rich UI block, appended as-is
-  | { type: 'done' }                                                      // stream finished
-  | { type: 'error'; message: string }                                    // stream failed
-```
+- `createSseAdapter(url, options?)` — SSE / OpenAI-compatible streams. Parses `choices[0].delta.content` by default. Options: `method`, `headers`, `getHeaders`, `getBody`, `parseEvent`.
+- `createFetchStreamAdapter(url, options?)` — raw chunked HTTP / NDJSON. Options: `method`, `headers`, `getHeaders`, `getBody`, `parseChunk`.
+- `mockAdapter` — dev-only, keyword-triggered scenarios: table, proposal, activity, help, error.
 
-### mockAdapter — for development only
-
-```ts
-import { mockAdapter } from 'juneau';
-// Responds to keywords: "show"/"table" → table, "suggest"/"proposal" → proposal card,
-// "help" → capabilities, "error" → error. No backend needed.
-```
-
----
-
-## COMPONENTS
-
-### JuneauProvider — required wrapper
+## Typical integration pattern
 
 ```tsx
-<JuneauProvider
-  theme={{ colorPrimary: '#1d4ed8', colorAccent: '#7c3aed', fontFamily: '"Inter", sans-serif' }}
-  labels={{ sidebarTitle: 'Ask AI', sendMessage: 'Send' }}
->
-  {children}
+// main.tsx
+<JuneauProvider labels={juneauCs}>
+  <AiChatProvider
+    adapter={createSseAdapter('/api/chat')}
+    onProposalConfirm={(id, payload) => handleAction(id, payload)}
+  >
+    <App />
+  </AiChatProvider>
 </JuneauProvider>
+
+// Layout or any persistent shell
+<AiSidebar />
+
+// Any page — tell AI where the user is
+const { setContext } = useAiChatContext();
+useEffect(() => {
+  setContext({ page: 'invoices', tools: ['search', 'export'], role: 'admin' });
+}, []);
 ```
 
-### AiSidebar — self-contained chat panel (owns state internally)
+## Exports
 
-```tsx
-<AiSidebar
-  adapter={adapter}                          // required
-  title="AI Assistant"                       // overrides sidebarTitle label
-  context={{ pageId: 'invoices', entityId: 42 }} // forwarded to every adapter.sendMessage call
-  icon={<MyIcon />}                          // replaces brain icon in header + avatars
-  actions={[                                 // toolbar buttons; [] to hide toolbar
-    { icon: <AttachIcon />, label: 'Attach', onClick: openPicker },
-  ]}
-  sendIcon={<SendIcon />}                    // replaces paper-plane icon
-  onProposalConfirm={(id, payload) => {}}    // called when user confirms a proposal card
-  onProposalCancel={(id) => {}}
-  className="my-sidebar"
-  style={{ width: 380 }}
-/>
-```
+Types: `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiTextPart`, `AiTablePartType`, `AiProposalPart`, `AiProposal`, `AiActivityPartType`, `AiActivityStatus`, `AiErrorPart`, `AiBackendAdapter`, `AiAdapterInput`, `AiStreamEvent`, `AiStreamTextEvent`, `AiStreamPartEvent`, `AiStreamDoneEvent`, `AiStreamErrorEvent`, `JuneauTheme`, `JuneauLabels`, `AiInputAction`, `UseAiChatOptions`, `UseAiChatReturn`, `AiChatContextValue`
 
-### AiChat — headless chat body (you manage state via useAiChat)
+Utilities: `consumeStream`, `delay`, `getMessageText`
 
-Use when embedding chat in your own layout.
-
-```tsx
-const chat = useAiChat({ adapter });
-
-<AiChat
-  messages={chat.messages}
-  input={chat.input}
-  isLoading={chat.isLoading}
-  error={chat.error}
-  onInputChange={chat.setInput}
-  onSend={chat.sendMessage}
-  onStop={chat.stop}                         // shows stop button while streaming
-  onProposalConfirm={chat.confirmProposal}
-  onProposalCancel={chat.cancelProposal}
-  assistantIcon={<MyIcon />}
-  actions={[]}
-  placeholder="Ask anything…"
-/>
-```
-
----
-
-## useAiChat HOOK
-
-```ts
-const chat = useAiChat({
-  adapter,             // required
-  context,             // optional — forwarded to adapter on every call
-  onProposalConfirm,   // optional (id, payload) => void
-  onProposalCancel,    // optional (id) => void
-});
-
-chat.messages            // AiMessage[] — full conversation
-chat.input               // string
-chat.setInput            // (value: string) => void
-chat.sendMessage()       // sends current input as user message
-chat.sendMessageWithText('text') // send programmatically without touching input state
-chat.sendGreeting('hint')        // assistant speaks first — no user bubble shown. hint sent as system message to adapter
-chat.stop()              // abort in-flight stream, keep messages. no error state — stream just ends where cut
-chat.isLoading           // boolean — true from send until stream ends
-chat.isConnecting        // boolean — true from send until FIRST token arrives. use for "Connecting…" UI
-chat.error               // string | null
-chat.reset()             // clear all messages + abort stream
-chat.confirmProposal(id, payload)
-chat.cancelProposal(id)
-```
-
-### sendGreeting — how contextHint flows to the adapter
-
-`sendGreeting(hint)` sends hint as `messages[0]` with `role: 'system'`. No user bubble shown.
-
-```ts
-// Component:
-useEffect(() => { chat.sendGreeting('User opened Invoices page. Greet briefly.'); }, []);
-
-// Adapter receives:
-async *sendMessage({ messages }) {
-  const hint = getMessageText(messages[0]); // role === 'system'
-  // forward as system prompt to your backend
-}
-```
-
-### Auth patterns
-
-```ts
-// Bearer token:
-createSseAdapter('/api/chat', {
-  getHeaders: async () => ({ Authorization: `Bearer ${await getToken()}` }),
-});
-
-// Session cookie same-origin — no config needed, browser sends automatically:
-createSseAdapter('/api/chat');
-
-// Session cookie cross-origin — write custom adapter:
-const adapter: AiBackendAdapter = {
-  async *sendMessage({ messages }) {
-    const res = await fetch('https://api.example.com/chat', {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages }),
-    });
-    // stream…
-  },
-};
-```
-
-### Reading message text — use getMessageText, don't dig into parts
-
-```ts
-import { getMessageText } from 'juneau';
-
-const lastUser = [...messages].reverse().find(m => m.role === 'user');
-const text = lastUser ? getMessageText(lastUser) : ''; // plain string, all text parts joined
-```
-
----
-
-## RICH MESSAGE PARTS
-
-Emit rich blocks from the adapter alongside text:
-
-### Proposal card (confirm / cancel action)
-
-```ts
-yield {
-  type: 'part',
-  part: {
-    type: 'proposal',
-    proposal: {
-      id: 'delete-item',           // returned to onProposalConfirm
-      title: 'Delete this item?',
-      description: 'Cannot be undone.',
-      confirmLabel: 'Delete',      // optional, falls back to labels.proposalConfirm
-      cancelLabel: 'Keep',         // optional, falls back to labels.proposalCancel
-      payload: { itemId: 42 },     // anything — you get it back in onProposalConfirm
-    },
-  },
-};
-```
-
-### Data table
-
-```ts
-yield {
-  type: 'part',
-  part: {
-    type: 'table',
-    columns: ['Name', 'Amount', 'Status'],
-    rows: [
-      { Name: 'Item A', Amount: '$1,200', Status: 'Paid' },
-      { Name: 'Item B', Amount: '$840',   Status: 'Pending' },
-    ],
-  },
-};
-```
-
-Text parts are rendered as **markdown** (via react-markdown, XSS-safe). Bold, lists, code blocks, tables all work.
-
----
-
-## THEMING
-
-```tsx
-<JuneauProvider theme={{
-  colorPrimary:        '#1d4ed8',  // send button, user bubble
-  colorAccent:         '#7c3aed',  // header bg, proposal confirm, avatar
-  colorSurface:        '#ffffff',  // cards, sidebar, input bg
-  colorSurfaceRaised:  '#f4f4f6',  // page bg, table headers
-  colorBorder:         '#e8e8ec',  // borders
-  colorTextPrimary:    '#000000',
-  colorTextSecondary:  '#474747',
-  colorTextMuted:      '#474747',
-  colorTextFaint:      '#9090a0',  // empty states
-  colorTextInverse:    '#ffffff',  // text on dark bg
-  colorAssistantAvatar:'#FF49A4',  // avatar circle
-  radiusSm:            '6px',
-  radiusMd:            '8px',
-  radiusLg:            '12px',
-  fontFamily:          '"Inter", sans-serif',
-}}>
-```
-
-All keys optional. Only specified keys override defaults. Scoped to provider subtree.
-
----
-
-## LABELS / i18n
-
-```tsx
-import { juneauCs, juneauEn } from 'juneau'; // built-in locales
-
-<JuneauProvider labels={juneauCs}>           // full Czech locale
-<JuneauProvider labels={{ sidebarTitle: 'Ask AI', sendMessage: 'Send' }}> // partial override
-```
-
-Label keys: `sidebarTitle`, `clearConversation`, `inputPlaceholder`, `sendMessage`, `stopMessage`,
-`typingMessage`, `connectingMessage`, `emptyStateText`, `emptyStateHint`,
-`proposalConfirm`, `proposalCancel`, `errorDismiss`,
-`actionAddFile`, `actionQuickActions`, `actionNew`, `actionHistory`, `actionRules`
-
----
-
-## EXPORTED TYPES AND UTILITIES
-
-```ts
-// Adapter
-AiBackendAdapter, AiAdapterInput, AiStreamEvent
-AiStreamTextEvent, AiStreamPartEvent, AiStreamDoneEvent, AiStreamErrorEvent
-
-// Adapter factories
-SseAdapterOptions, SseEventParser
-FetchStreamAdapterOptions, FetchChunkParser
-
-// Messages
-AiMessage, AiMessageRole, AiMessagePart
-AiTextPart, AiTablePartType, AiProposalPart, AiProposal, AiErrorPart
-
-// Hook
-UseAiChatOptions, UseAiChatReturn
-
-// Provider
-JuneauTheme, JuneauLabels
-
-// Components
-AiInputAction
-
-// Utilities
-getMessageText(message: AiMessage): string  // extracts plain text from a message, joins all text parts
-consumeStream(iterable, onEvent, signal?)    // iterate a stream manually with abort support
-delay(ms: number): Promise<void>            // used internally in mockAdapter
-```
-
----
-
-## ARCHITECTURE NOTES (for generating code correctly)
-
-- `AiSidebar` = `AiChatHeader` + `AiChat` + owns `useAiChat` internally. Use when you want a plug-and-play sidebar.
-- `AiChat` = message list + input + error banner. No state. Parent calls `useAiChat` and passes props. Use for custom layouts.
-- `useAiChat` = all state and streaming logic. No JSX. Use for fully custom UIs.
-- `context` prop on `AiSidebar` / `useAiChat` is forwarded as `input.context` to every `adapter.sendMessage` call — use it to pass page-level data without polluting the message history.
-- Text chunks are accumulated — multiple `{ type: 'text' }` events merge into one `AiTextPart`. Don't yield one event per character.
-- Always yield `{ type: 'done' }` at the end of a successful stream. Omitting it is fine but the loading state won't clear until the readable stream closes.
-- `sendGreeting(hint)` sends a system message to the adapter and streams the response as an assistant-only message. No user bubble is added to the conversation. Good for proactive page-load summaries.
-
----
-
-## SECURITY
-
-- No API keys ever touch Juneau — keys live in your backend, not the adapter.
-- Markdown rendered via react-markdown — no dangerouslySetInnerHTML, safe against XSS.
-- No persistence — conversation lives in React state only.
+Locales: `juneauEn`, `juneauCs`

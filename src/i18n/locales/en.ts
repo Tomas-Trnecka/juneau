@@ -3,6 +3,8 @@ import type { JuneauLabels } from '../types';
 export const juneauEn: JuneauLabels = {
   sidebarTitle: 'AI Assistant',
   clearConversation: 'Clear conversation',
+  minimizeSidebar: 'Minimize',
+  expandSidebar: 'Expand',
   inputPlaceholder: 'Ask a question… (Enter to send)',
   sendMessage: 'Send message',
   stopMessage: 'Stop',
