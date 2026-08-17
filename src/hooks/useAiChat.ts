@@ -10,6 +10,22 @@ import type {
 let messageIdCounter = 0;
 const nextId = (): string => `msg-${++messageIdCounter}-${Date.now()}`;
 
+/**
+ * Prepares the message history for sending to the adapter.
+ *
+ * Assistant messages that contain only activity/error parts and no text
+ * are invisible to the LLM — passing them as empty content breaks the
+ * conversation. This strips those turns from history entirely.
+ *
+ * User and system messages are always kept as-is.
+ */
+function serializeHistory(messages: AiMessage[]): AiMessage[] {
+  return messages.filter(msg => {
+    if (msg.role !== 'assistant') return true;
+    return msg.parts.some(p => p.type === 'text');
+  });
+}
+
 export type UseAiChatOptions = {
   adapter: AiBackendAdapter;
   /** Optional context passed through to every adapter call */
@@ -141,7 +157,7 @@ export function useAiChat({
     abortRef.current = abort;
 
     try {
-      const stream = adapter.sendMessage({ messages: [...currentMessages, userMessage], context });
+      const stream = adapter.sendMessage({ messages: serializeHistory([...currentMessages, userMessage]), context });
 
       await consumeStream(
         stream,
@@ -218,7 +234,7 @@ export function useAiChat({
     };
 
     try {
-      const stream = adapter.sendMessage({ messages: [syntheticContext], context });
+      const stream = adapter.sendMessage({ messages: serializeHistory([syntheticContext]), context });
       await consumeStream(
         stream,
         (event: AiStreamEvent) => {
