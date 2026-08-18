@@ -10,7 +10,7 @@ export default defineConfig({
     lib: {
       entry: resolve(dirname, 'src/server/index.ts'),
       fileName: 'index',
-      formats: ['es'],
+      formats: ['es', 'cjs'],
     },
     rollupOptions: {
       // zod is a peer dep for server consumers — don't bundle it
