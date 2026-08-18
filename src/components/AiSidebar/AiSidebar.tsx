@@ -25,6 +25,12 @@ type Props = {
   height?: string;
   className?: string;
   style?: CSSProperties;
+  /**
+   * Called when the user resets the conversation. When provided, a reset
+   * button is shown in the header. Internally calls `useAiChatContext().reset()`
+   * and then invokes this callback — no wrapper component needed.
+   */
+  onReset?: () => void;
 };
 
 export function AiSidebar({
@@ -35,6 +41,7 @@ export function AiSidebar({
   height = '60vh',
   className,
   style,
+  onReset,
 }: Props) {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -47,9 +54,14 @@ export function AiSidebar({
     isLoading,
     isConnecting,
     error,
+    reset,
     confirmProposal,
     cancelProposal,
   } = useAiChatContext();
+
+  const handleReset = onReset
+    ? () => { reset(); onReset(); }
+    : undefined;
 
   return (
     <aside
@@ -61,6 +73,7 @@ export function AiSidebar({
         icon={icon}
         onMinimize={() => setIsMinimized(v => !v)}
         isMinimized={isMinimized}
+        onReset={handleReset}
       />
 
       {!isMinimized && (

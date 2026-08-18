@@ -26,7 +26,7 @@ export type {
   JuneauWireError,
 } from './core/types';
 
-export { consumeStream, delay, getMessageText } from './core/stream';
+export { consumeStream, delay, getMessageText, serializeMessages } from './core/stream';
 
 // ─── Adapters ─────────────────────────────────────────────────────────────────
 export { mockAdapter } from './adapters/mockAdapter';

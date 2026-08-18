@@ -42,14 +42,27 @@ type Props = {
    * Use the exported `juneauCs` or `juneauEn` objects, or build your own from `JuneauLabels`.
    */
   labels?: Partial<JuneauLabels>;
+  /**
+   * Sets the sidebar title globally for every `AiSidebar` rendered inside this
+   * provider. Equivalent to overriding `labels.sidebarTitle` but more
+   * discoverable — no need to spread the whole labels object just to set a name.
+   *
+   * A `title` prop passed directly to `AiSidebar` still takes precedence.
+   *
+   * @example
+   * <JuneauProvider defaultTitle="Tappeer AI">…</JuneauProvider>
+   */
+  defaultTitle?: string;
   className?: string;
   style?: CSSProperties;
 };
 
-export function JuneauProvider({ children, theme, labels, className, style }: Props) {
-  const resolvedLabels: JuneauLabels = labels
-    ? { ...juneauEn, ...labels }
-    : juneauEn;
+export function JuneauProvider({ children, theme, labels, defaultTitle, className, style }: Props) {
+  const resolvedLabels: JuneauLabels = {
+    ...juneauEn,
+    ...(defaultTitle ? { sidebarTitle: defaultTitle } : {}),
+    ...labels,
+  };
 
   const themeVars = theme ? buildThemeVars(theme) : undefined;
 

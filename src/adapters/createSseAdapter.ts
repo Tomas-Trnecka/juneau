@@ -39,6 +39,24 @@ export type SseAdapterOptions = {
   getBody?: (input: AiAdapterInput) => unknown;
 
   /**
+   * Transform the message history before it is sent to the backend.
+   * Called with the full `AiMessage[]` that would normally be sent and must
+   * return the transformed array (or a promise of one).
+   *
+   * Use this to remap roles, filter messages, or convert to a backend-specific
+   * schema without having to write a full custom adapter.
+   *
+   * @example
+   * // Strip system messages before sending:
+   * getMessages: (msgs) => msgs.filter(m => m.role !== 'system')
+   *
+   * @example
+   * // Convert to Anthropic SDK message format:
+   * getMessages: (msgs) => toSdkMessages(msgs)
+   */
+  getMessages?: (messages: AiAdapterInput['messages']) => AiAdapterInput['messages'] | Promise<AiAdapterInput['messages']>;
+
+  /**
    * Credentials mode passed to fetch. Use `'include'` for cross-origin requests
    * that require cookies (e.g. session-based auth to a different domain).
    * Defaults to browser default (`'same-origin'`).
@@ -114,6 +132,7 @@ export function createSseAdapter(url: string, options: SseAdapterOptions = {}): 
     headers: staticHeaders = {},
     getHeaders,
     getBody,
+    getMessages,
     parseEvent = defaultOpenAiParser,
     credentials,
   } = options;
@@ -122,9 +141,12 @@ export function createSseAdapter(url: string, options: SseAdapterOptions = {}): 
     async *sendMessage(input: AiAdapterInput): AsyncIterable<AiStreamEvent> {
       const dynamicHeaders = getHeaders ? await getHeaders(input) : {};
 
+      const messages = getMessages ? await getMessages(input.messages) : input.messages;
+      const resolvedInput: AiAdapterInput = { ...input, messages };
+
       const body = getBody
-        ? getBody(input)
-        : { messages: input.messages, context: input.context };
+        ? getBody(resolvedInput)
+        : { messages: resolvedInput.messages, context: resolvedInput.context };
 
       const response = await fetch(url, {
         method,

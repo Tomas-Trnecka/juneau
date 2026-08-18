@@ -1,5 +1,29 @@
 import type { AiMessage, AiStreamEvent } from './types';
 
+/**
+ * Prepares a message history array for sending to the backend adapter —
+ * the exact same transformation Juneau applies internally before every request.
+ *
+ * Assistant messages that contain only activity or error parts (no text) are
+ * replaced with an empty-text assistant turn so conversation alternation stays
+ * valid. Models reject histories where two user messages appear consecutively
+ * with no assistant turn in between.
+ *
+ * Use this to inspect or replicate what Juneau actually sends, e.g. when
+ * building a custom adapter or debugging history shape:
+ *
+ * @example
+ * const wire = serializeMessages(messages);
+ * console.log(JSON.stringify(wire, null, 2));
+ */
+export function serializeMessages(messages: AiMessage[]): AiMessage[] {
+  return messages.map(msg => {
+    if (msg.role !== 'assistant') return msg;
+    if (msg.parts.some(p => p.type === 'text')) return msg;
+    return { ...msg, parts: [{ type: 'text' as const, text: '' }] };
+  });
+}
+
 export const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 

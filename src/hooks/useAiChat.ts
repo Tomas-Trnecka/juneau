@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { consumeStream } from '../core/stream';
+import { consumeStream, serializeMessages } from '../core/stream';
 import type {
   AiMessage,
   AiMessagePart,
@@ -10,21 +10,8 @@ import type {
 let messageIdCounter = 0;
 const nextId = (): string => `msg-${++messageIdCounter}-${Date.now()}`;
 
-/**
- * Prepares the message history for sending to the adapter.
- *
- * Assistant messages that contain only activity/error parts and no text
- * are invisible to the LLM — passing them as empty content breaks the
- * conversation. This strips those turns from history entirely.
- *
- * User and system messages are always kept as-is.
- */
-function serializeHistory(messages: AiMessage[]): AiMessage[] {
-  return messages.filter(msg => {
-    if (msg.role !== 'assistant') return true;
-    return msg.parts.some(p => p.type === 'text');
-  });
-}
+/** Internal alias used throughout this hook. */
+const serializeHistory = serializeMessages;
 
 export type UseAiChatOptions = {
   adapter: AiBackendAdapter;
