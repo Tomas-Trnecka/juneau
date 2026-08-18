@@ -12,6 +12,10 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
     "./dist/style.css": "./dist/style.css"
   },
   "files": [
@@ -22,7 +26,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:types && vite build --mode lib",
+    "build": "npm run build:types && vite build --mode lib && vite build --config vite.config.server.ts",
     "build:types": "tsc --project tsconfig.build.json",
     "build:demo": "vite build",
     "preview": "vite preview --outDir dist-demo",
@@ -38,7 +42,8 @@
   },
   "dependencies": {
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "latest",

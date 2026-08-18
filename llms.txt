@@ -140,6 +140,46 @@ Activity `metadata`: opaque, not rendered by Juneau. Use for internal data (tool
 Exported wire types: `JuneauWireEvent`, `JuneauWireText`, `JuneauWireActivity`, `JuneauWirePart`, `JuneauWireDone`, `JuneauWireError`.
 Shared parser utility: `parseJuneauWire(raw: string): AiStreamEvent[]` — used internally by both adapters, not exported.
 
+## Server utilities — `juneau/server`
+
+Node-only helpers for Juneau-compatible backends. Import from the `/server` subpath (keeps zod out of the browser bundle):
+
+```ts
+import { toSdkMessages, createSkillSet, streamToWire, withToolRecovery } from 'juneau/server';
+```
+
+### toSdkMessages(messages: AiMessage[]): CoreMessage[]
+Converts Juneau message history to ai-sdk's CoreMessage format. Extracts text parts, replaces activity-only assistant messages with an empty-text turn, injects placeholder assistant turns between consecutive user messages, and filters empty turns.
+
+### createSkillSet(skills, options?) → SkillSet
+Wraps skill definitions into ai-sdk tool definitions with a built-in activity event buffer. Each tool call automatically emits `running`, `done`, and `failed` Juneau wire SSE strings into the buffer.
+
+SkillDefinition fields: `description`, `input` (ZodType), `labels.running`, `labels.done`, `labels.failed?`, `execute`.
+
+SkillSet fields: `tools` (pass to streamText), `drainActivities()` (returns and clears buffered SSE strings), `hadFailure`, `failureContext`.
+
+SkillSetOptions: `language?` (default: `'en'`) — selects which label variant to use.
+
+### streamToWire(fullStream, skillSet?) → AsyncIterable\<string\>
+Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles ai-sdk v6/v7 chunk property rename (`textDelta` → `text`). Drains `skillSet.drainActivities()` before each text chunk and once after the loop. Emits `done` event at the end.
+
+### withToolRecovery(options) → AsyncIterable\<string\>
+Two-phase streaming pattern for tool failure recovery (Gemini 2.5 Flash retries tools instead of writing text on failure). Phase 1 streams with tools (`maxSteps: 1`). If a tool failed and no text was produced, phase 2 calls the model without tools, injecting `failureContext` as an assistant message to force a text response.
+
+Options: `phase1: () => { fullStream }`, `phase2: (failureContext) => { fullStream }`, `skillSet`.
+
+```ts
+for await (const chunk of withToolRecovery({
+  phase1: () => streamText({ model, system, messages: sdkMessages, tools: skillSet.tools, maxSteps: 1 }),
+  phase2: (ctx) => streamText({ model, system, messages: [...sdkMessages, { role: 'assistant', content: ctx }] }),
+  skillSet,
+})) {
+  res.write(chunk);
+}
+```
+
+---
+
 ## Typical integration pattern
 
 ```tsx

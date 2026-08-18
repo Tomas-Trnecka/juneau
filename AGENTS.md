@@ -57,6 +57,8 @@ src/
     parts/        # Message part renderers: AiTablePart, AiProposalCard, AiMessagePartRenderer
   i18n/           # JuneauLabels type, context/hook, locales (en, cs)
   styles/         # tokens.css — single source of truth for all design tokens
+  server/         # Node-only backend utilities — exported from juneau/server subpath
+                  # toSdkMessages, createSkillSet, streamToWire, withToolRecovery
   demo/           # Demo app — not part of the public API, never exported
     views/        # DashboardView, SidebarView
 ```
@@ -66,6 +68,7 @@ src/
 - `adapters/` imports only from `core/`
 - `hooks/` imports from `core/`, no JSX
 - `components/` imports from `core/`, `hooks/`, and `i18n/`, no adapter logic
+- `server/` imports only from `core/` and third-party packages (zod); no React, no JSX, no browser APIs
 - `demo/` can import anything; it is never exported
 
 ### Key architectural distinction: AiChat vs AiSidebar
@@ -215,6 +218,21 @@ The primary hook. Returns:
 | `reset()` | Clear all messages, abort any in-flight stream |
 | `confirmProposal(id, payload)` | Calls `onProposalConfirm` callback |
 | `cancelProposal(id)` | Calls `onProposalCancel` callback |
+
+---
+
+## Server utilities API (`juneau/server`)
+
+Exported from the `/server` subpath — Node-only, never imported by browser code.
+
+| Export | Description |
+|---|---|
+| `toSdkMessages(messages)` | Converts `AiMessage[]` to `CoreMessage[]` for ai-sdk. Fixes alternation, extracts text parts. |
+| `createSkillSet(skills, options?)` | Returns `SkillSet` — ai-sdk `tools` + activity event buffer. Auto-emits `running`/`done`/`failed` wire events. |
+| `streamToWire(fullStream, skillSet?)` | Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles v6/v7 chunk rename, drains activity buffer, emits `done`. |
+| `withToolRecovery(options)` | Two-phase streaming: phase 1 with tools, phase 2 without (forced text recovery) if a tool failed and no text was produced. |
+
+Exported types: `SkillSet`, `SkillDefinition`, `SkillSetOptions`, `ToolRecoveryOptions`, `CoreMessage`.
 
 ---
 

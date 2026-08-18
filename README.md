@@ -182,6 +182,64 @@ export const myAdapter: AiBackendAdapter = {
 
 ---
 
+### Backend utilities — `juneau/server`
+
+If your backend uses ai-sdk, Juneau ships server-side helpers that eliminate the boilerplate of history mapping, activity streaming, and tool failure recovery. Import from the `/server` subpath — zod stays out of the browser bundle.
+
+```ts
+import { toSdkMessages, createSkillSet, withToolRecovery } from 'juneau/server';
+```
+
+**Full integration in ~15 lines:**
+
+```ts
+import { toSdkMessages, createSkillSet, withToolRecovery } from 'juneau/server';
+import { streamText } from 'ai';
+import { z } from 'zod';
+
+const skillSet = createSkillSet({
+  search: {
+    description: 'Search for records.',
+    input: z.object({ query: z.string() }),
+    labels: {
+      running: { en: 'Searching…',    cs: 'Vyhledávám…' },
+      done:    { en: 'Results found', cs: 'Nalezeno' },
+    },
+    execute: async ({ query }) => db.search(query),
+  },
+}, { language: context.language });
+
+for await (const chunk of withToolRecovery({
+  phase1: () => streamText({ model, system, messages: toSdkMessages(input.messages), tools: skillSet.tools, maxSteps: 1 }),
+  phase2: (ctx) => streamText({ model, system, messages: [...toSdkMessages(input.messages), { role: 'assistant', content: ctx }] }),
+  skillSet,
+})) {
+  res.write(chunk);
+}
+```
+
+#### `toSdkMessages(messages)`
+
+Converts `AiMessage[]` to `CoreMessage[]` for ai-sdk. Extracts text from parts, fixes conversation alternation (no two consecutive user turns), filters empty turns.
+
+#### `createSkillSet(skills, options?)`
+
+Wraps skill definitions into ai-sdk `tools` with a built-in activity buffer. Each tool call automatically emits `running` / `done` / `failed` Juneau wire SSE strings — no manual activity handling needed.
+
+`SkillSet` members: `tools`, `drainActivities()`, `hadFailure`, `failureContext`.
+
+`SkillSetOptions`: `language?` — selects label variant (`'en'` default).
+
+#### `streamToWire(fullStream, skillSet?)`
+
+Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles ai-sdk v6/v7 chunk rename, drains activity buffer at the right moment, emits `done` at the end.
+
+#### `withToolRecovery(options)`
+
+Two-phase pattern for Gemini-style tool failures — when a tool fails and the model loops on retrying instead of writing text, phase 2 calls the model without tools and injects the failure context to force a text response.
+
+---
+
 ### Juneau wire protocol — for Juneau-compatible backends
 
 If your backend is built specifically for Juneau (e.g. Tappeer), stream newline-delimited JSON where each line is one of these shapes. Both `createSseAdapter` and `createFetchStreamAdapter` parse this automatically — no custom `parseEvent` or `parseChunk` needed.
