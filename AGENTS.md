@@ -229,10 +229,10 @@ Exported from the `/server` subpath — Node-only, never imported by browser cod
 |---|---|
 | `toSdkMessages(messages)` | Converts `AiMessage[]` to `CoreMessage[]` for ai-sdk. Fixes alternation, extracts text parts. |
 | `createSkillSet(skills, options?)` | Returns `SkillSet` — ai-sdk `tools` + activity event buffer. Auto-emits `running`/`done`/`failed` wire events. |
-| `streamToWire(fullStream, skillSet?)` | Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles v6/v7 chunk rename, drains activity buffer, emits `done`. |
-| `withToolRecovery(options)` | Two-phase streaming: phase 1 with tools, phase 2 without (forced text recovery) if a tool failed and no text was produced. |
+| `streamToWire(fullStream, skillSet?, options?)` | Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all v7 text chunk types (`text-delta` and `text`), drains activity buffer, emits `done`. `options.debug` logs every chunk. |
+| `withToolRecovery(options)` | Two-phase streaming: phase 1 with tools, phase 2 without (forced text recovery) only if a tool failed and no text was produced. Silent-success path (tool ok, no text) emits `done` without triggering phase 2. `debug` option logs all decision points. |
 
-Exported types: `SkillSet`, `SkillDefinition`, `SkillSetOptions`, `ToolRecoveryOptions`, `CoreMessage`.
+Exported types: `SkillSet`, `SkillDefinition`, `SkillSetOptions`, `ToolRecoveryOptions`, `StreamToWireOptions`, `CoreMessage`.
 
 ---
 

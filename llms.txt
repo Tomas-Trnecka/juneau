@@ -158,15 +158,15 @@ SkillDefinition fields: `description`, `input` (ZodType), `labels.running`, `lab
 
 SkillSet fields: `tools` (pass to streamText), `drainActivities()` (returns and clears buffered SSE strings), `hadFailure`, `failureContext`.
 
-SkillSetOptions: `language?` (default: `'en'`) — selects which label variant to use.
+SkillSetOptions: `language?` (default: `'en'`) — selects which label variant to use. `debug?` (default: `false`) — emit `console.debug` logs per skill execution.
 
-### streamToWire(fullStream, skillSet?) → AsyncIterable\<string\>
-Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles ai-sdk v6/v7 chunk property rename (`textDelta` → `text`). Drains `skillSet.drainActivities()` before each text chunk and once after the loop. Emits `done` event at the end.
+### streamToWire(fullStream, skillSet?, options?) → AsyncIterable\<string\>
+Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all ai-sdk v7 text chunk types (`text-delta` and `text`, with `textDelta` v6 fallback). Drains `skillSet.drainActivities()` before each text chunk and once after the loop. Emits `done` event at the end. `options.debug` logs every chunk received.
 
 ### withToolRecovery(options) → AsyncIterable\<string\>
-Two-phase streaming pattern for tool failure recovery (Gemini 2.5 Flash retries tools instead of writing text on failure). Phase 1 streams with tools (`maxSteps: 1`). If a tool failed and no text was produced, phase 2 calls the model without tools, injecting `failureContext` as an assistant message to force a text response.
+Two-phase streaming pattern for tool failure recovery (Gemini 2.5 Flash retries tools instead of writing text on failure). Phase 1 streams with tools. If a tool failed and no text was produced, phase 2 calls the model without tools, injecting `failureContext` as an assistant message to force a text response. If the tool succeeded but no text was produced (Gemini silent-response), emits `done` cleanly without triggering phase 2.
 
-Options: `phase1: () => { fullStream }`, `phase2: (failureContext) => { fullStream }`, `skillSet`.
+Options: `phase1: () => { fullStream }`, `phase2: (failureContext) => { fullStream }`, `skillSet`, `debug?`.
 
 ```ts
 for await (const chunk of withToolRecovery({

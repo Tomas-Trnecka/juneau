@@ -228,15 +228,15 @@ Wraps skill definitions into ai-sdk `tools` with a built-in activity buffer. Eac
 
 `SkillSet` members: `tools`, `drainActivities()`, `hadFailure`, `failureContext`.
 
-`SkillSetOptions`: `language?` — selects label variant (`'en'` default).
+`SkillSetOptions`: `language?` — selects label variant (`'en'` default). `debug?` — emit `console.debug` logs per skill execution (default: `false`).
 
-#### `streamToWire(fullStream, skillSet?)`
+#### `streamToWire(fullStream, skillSet?, options?)`
 
-Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles ai-sdk v6/v7 chunk rename, drains activity buffer at the right moment, emits `done` at the end.
+Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all ai-sdk v7 text chunk types (`text-delta` and `text`), drains activity buffer at the right moment, emits `done` at the end. Pass `{ debug: true }` to log every chunk received from ai-sdk.
 
 #### `withToolRecovery(options)`
 
-Two-phase pattern for Gemini-style tool failures — when a tool fails and the model loops on retrying instead of writing text, phase 2 calls the model without tools and injects the failure context to force a text response.
+Two-phase pattern for Gemini-style tool calls. Phase 1 streams with tools. Phase 2 triggers only when a tool failed **and** no text was produced — it calls the model without tools and injects the failure context to force a text response. Pass `debug: true` to log phase decisions and the `textProduced` / `hadFailure` state at each decision point.
 
 ---
 

@@ -43,12 +43,21 @@ export interface SkillSet {
 export interface SkillSetOptions {
   /** Language code — determines which label variant to use. Default: 'en' */
   language?: string;
+  /** Emit structured console.debug logs for each skill execution. Default: false */
+  debug?: boolean;
 }
 
 export interface ToolRecoveryOptions {
   phase1: () => { fullStream: AsyncIterable<unknown> };
   phase2: (failureContext: string) => { fullStream: AsyncIterable<unknown> };
   skillSet: SkillSet;
+  /** Emit structured console.debug logs for phase decisions and chunk flow. Default: false */
+  debug?: boolean;
+}
+
+export interface StreamToWireOptions {
+  /** Emit structured console.debug logs for every ai-sdk chunk received. Default: false */
+  debug?: boolean;
 }
 
 /**

@@ -19,6 +19,7 @@ function pickLabel(labels: { cs: string; en: string }, language: string): string
  */
 export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}): SkillSet {
   const language = options.language ?? 'en';
+  const debug = options.debug ?? false;
   const activityBuffer: string[] = [];
   let hadFailure = false;
   let failureContext: string | null = null;
@@ -30,6 +31,12 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
       description: skill.description,
       parameters: skill.input,
       execute: async (input: unknown) => {
+        if (debug) {
+          console.debug(`[juneau] skill "${name}" → executing, input:`, input);
+        }
+
+        const startMs = debug ? Date.now() : 0;
+
         // Emit a "running" activity event into the buffer
         activityBuffer.push(
           formatActivityEvent({
@@ -44,6 +51,11 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
         try {
           const result = await skill.execute(input as never);
 
+          const durationMs = debug ? Date.now() - startMs : 0;
+          if (debug) {
+            console.debug(`[juneau] skill "${name}" → done in ${durationMs}ms, result:`, result);
+          }
+
           // Emit a "done" activity event
           activityBuffer.push(
             formatActivityEvent({
@@ -57,6 +69,13 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
 
           return result;
         } catch (err) {
+          const durationMs = debug ? Date.now() - startMs : 0;
+          const message = err instanceof Error ? err.message : String(err);
+
+          if (debug) {
+            console.debug(`[juneau] skill "${name}" → FAILED in ${durationMs}ms: "${message}"`);
+          }
+
           const failedLabels = skill.labels.failed ?? { cs: 'Nepodařilo se', en: 'Failed' };
 
           // Emit a "failed" activity event
@@ -71,7 +90,7 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
           );
 
           hadFailure = true;
-          failureContext = `Tool "${name}" failed: ${err instanceof Error ? err.message : String(err)}`;
+          failureContext = `Tool "${name}" failed: ${message}`;
 
           // Re-throw so ai-sdk knows the tool call failed
           throw err;

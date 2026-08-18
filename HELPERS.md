@@ -71,6 +71,7 @@ interface SkillDefinition<TInput extends ZodType = ZodType> {
 ```ts
 interface SkillSetOptions {
   language?: string;   // 'en' | 'cs' | any key present in your labels. Default: 'en'
+  debug?: boolean;     // emit console.debug logs per skill execution. Default: false
 }
 ```
 
@@ -118,7 +119,7 @@ for (const event of skillSet.drainActivities()) {
 
 ---
 
-## `streamToWire(fullStream, skillSet?)`
+## `streamToWire(fullStream, skillSet?, options?)`
 
 Converts ai-sdk's `fullStream` AsyncIterable into Juneau wire SSE strings. Handles chunk property
 naming, activity flush timing, and the final `done` event.
@@ -126,22 +127,24 @@ naming, activity flush timing, and the final `done` event.
 ```ts
 function streamToWire(
   fullStream: AsyncIterable<unknown>,
-  skillSet?: SkillSet
+  skillSet?: SkillSet,
+  options?: StreamToWireOptions
 ): AsyncIterable<string>;
 ```
 
 **What it handles internally:**
-- `chunk.type === 'text-delta'` → reads `chunk.text` (ai-sdk v7) with fallback to `chunk.textDelta` (v6)
+- `chunk.type === 'text-delta'` or `'text'` → reads `chunk.text` (ai-sdk v7) with fallback to `chunk.textDelta` (v6). Both chunk types are handled because ai-sdk v7 + Gemini may emit either in the same stream.
 - Calls `skillSet?.drainActivities()` before each text chunk — activities appear before the text they precede
 - Calls `skillSet?.drainActivities()` once more after the loop ends — catches activities from the last tool call when no text followed
 - Emits `data: {"type":"done"}\n\n` when the stream finishes
+- `options.debug` — when `true`, logs every chunk received from ai-sdk via `console.debug`, including type, content, drain counts, and yielded text. Never logs in production (default: `false`).
 
 ```ts
 import { streamToWire } from 'juneau/server';
 
-const result = streamText({ model, system, messages, tools: skillSet.tools, maxSteps: 1 });
+const result = streamText({ model, system, messages, tools: skillSet.tools, maxSteps: 2 });
 
-for await (const chunk of streamToWire(result.fullStream, skillSet)) {
+for await (const chunk of streamToWire(result.fullStream, skillSet, { debug: true })) {
   res.write(chunk);
 }
 ```
@@ -160,14 +163,18 @@ interface ToolRecoveryOptions {
   phase1: () => { fullStream: AsyncIterable<unknown> };
   phase2: (failureContext: string) => { fullStream: AsyncIterable<unknown> };
   skillSet: SkillSet;
+  debug?: boolean;
 }
 ```
 
-**Phase 1:** Stream with tools, `maxSteps: 1`. Tracks whether any text was produced.
+**Phase 1:** Stream with tools. Tracks whether any text was produced and whether a tool failure occurred.
 
-**Phase 2:** If a tool failed and the model produced no text, call the model again without tools,
-injecting `failureContext` as an assistant message. The model is forced to write a text response.
-If phase 1 succeeded (text was produced or no failure), phase 2 is skipped.
+**Phase 2:** Triggers only when `hadFailure && !textProduced` — calls the model again without tools,
+injecting `failureContext` as an assistant message to force a text response.
+
+**Silent-success path:** If the tool succeeded but the model emitted no text (`!hadFailure && !textProduced` — a known Gemini 2.5 Flash behaviour with `maxSteps > 1`), phase 2 is **not** triggered. `done` is emitted cleanly. Enable `debug: true` to see this branch logged explicitly so you can diagnose whether the text arrived under an unexpected chunk type or was simply not generated.
+
+**`debug`:** When `true`, logs phase start/complete, the `textProduced` and `hadFailure` values at each decision point, and whether phase 2 is triggered. Passes `debug` down to both `streamToWire` calls so chunk-level logs are also emitted.
 
 ```ts
 import { toSdkMessages, createSkillSet, withToolRecovery } from 'juneau/server';
@@ -233,5 +240,5 @@ export { toSdkMessages } from './toSdkMessages';
 export { createSkillSet } from './createSkillSet';
 export { streamToWire } from './streamToWire';
 export { withToolRecovery } from './withToolRecovery';
-export type { SkillSet, SkillDefinition, SkillSetOptions, ToolRecoveryOptions, CoreMessage } from './types';
+export type { SkillSet, SkillDefinition, SkillSetOptions, ToolRecoveryOptions, StreamToWireOptions, CoreMessage } from './types';
 ```
