@@ -47,9 +47,33 @@ export interface SkillSetOptions {
   debug?: boolean;
 }
 
+/**
+ * Structural match for ai-sdk v7's StreamTextResult — only the members
+ * withToolRecovery needs. Juneau does not import ai-sdk; passing the result
+ * of streamText() satisfies this shape.
+ */
+export interface ToolRecoveryStreamResult {
+  fullStream: AsyncIterable<unknown>;
+  /**
+   * ai-sdk v7: resolves after the stream is consumed to the response metadata,
+   * including the full message history (tool calls + tool results).
+   */
+  response?: Promise<{ messages: unknown[] }>;
+  /** Some ai-sdk versions expose the message history directly. */
+  messages?: Promise<unknown[]>;
+}
+
 export interface ToolRecoveryOptions {
-  phase1: () => { fullStream: AsyncIterable<unknown> };
+  phase1: () => ToolRecoveryStreamResult;
   phase2: (failureContext: string) => { fullStream: AsyncIterable<unknown> };
+  /**
+   * Silent-success recovery — called when a tool succeeded but the model wrote
+   * no text (observed with Gemini 2.5 Flash, which treats the tool call as its
+   * complete response). Receives the full phase 1 message history including
+   * tool-call and tool-result turns; call the model again without tools so it
+   * is forced to summarise the tool result as text.
+   */
+  phase3?: (messages: unknown[]) => { fullStream: AsyncIterable<unknown> };
   skillSet: SkillSet;
   /** Emit structured console.debug logs for phase decisions and chunk flow. Default: false */
   debug?: boolean;

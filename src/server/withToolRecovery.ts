@@ -2,29 +2,30 @@ import type { ToolRecoveryOptions } from './types';
 import { streamToWire } from './streamToWire';
 
 /**
- * Encapsulates the two-phase streaming pattern needed for Gemini 2.5 Flash
+ * Encapsulates the multi-phase streaming pattern needed for Gemini 2.5 Flash
  * tool call scenarios where the model either fails or silently succeeds without
  * emitting any text in the same stream pass.
  *
- * Phase 1: Stream with tools, maxSteps: 2 (or higher). Collect whether any
- *          text was produced and whether a tool failure occurred.
+ * Phase 1: Stream with tools. Collect whether any text was produced and whether
+ *          a tool failure occurred.
  *
- * Phase 2 triggers when a tool failed AND no text was produced:
+ * Phase 2 (failure recovery) — triggers when a tool failed AND no text was produced:
  *   - Injects failureContext as an assistant message so the model is forced to
  *     write a recovery text response (no tools available in phase 2).
  *
- * Silent-success path (hadFailure=false, textProduced=false):
- *   - Gemini called the tool successfully but wrote nothing. This is a known
- *     Gemini 2.5 Flash behaviour when maxSteps > 1: the tool result and the
- *     model's reply text arrive as separate steps, and text-delta may not be
- *     emitted by the time phase 1's fullStream is exhausted. The debug logs
- *     will reveal the exact chunk sequence. In this state we still emit done
- *     cleanly — the consumer can decide whether to retry.
+ * Phase 3 (silent-success recovery) — triggers when the tool succeeded but the
+ * model wrote no text. Confirmed Gemini 2.5 Flash behaviour: the fullStream ends
+ * with tool-call → tool-result → finish-step → finish and no text-delta ever
+ * arrives — Gemini treats the tool call as its complete response. Phase 3 receives
+ * the full phase 1 message history (including tool-call and tool-result turns,
+ * resolved from the ai-sdk result's `response`/`messages` promise) so the model
+ * can be called again without tools and forced to summarise the tool result.
+ * If phase3 is not provided, falls back to emitting done (previous behaviour).
  *
  * @returns AsyncIterable<string> of Juneau wire SSE strings (activities + text + done)
  */
 export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIterable<string> {
-  const { phase1, phase2, skillSet, debug = false } = options;
+  const { phase1, phase2, phase3, skillSet, debug = false } = options;
 
   if (debug) {
     console.debug('[juneau] withToolRecovery → phase 1 start');
@@ -40,7 +41,7 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
       producedText = true;
     }
 
-    // Hold back the done event — we may need to continue with phase 2
+    // Hold back the done event — we may need to continue with phase 2 or 3
     if (chunk.includes('"type":"done"')) {
       continue;
     }
@@ -68,19 +69,67 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
     if (debug) {
       console.debug('[juneau] withToolRecovery → phase 2 complete');
     }
-  } else if (!producedText && !skillSet.hadFailure) {
+    return;
+  }
+
+  if (!producedText && !skillSet.hadFailure && phase3) {
     // Tool succeeded but model emitted no text — Gemini silent-response scenario.
-    // Log clearly so the consumer can see this in debug output and diagnose
-    // whether text arrived in a different chunk type or was simply not generated.
-    if (debug) {
-      console.debug(
-        '[juneau] withToolRecovery → no failure, no text — emitting done (possible Gemini silent response)'
-      );
+    // Resolve the full message history from the consumed phase 1 result and let
+    // phase 3 call the model again (no tools) to summarise the tool result.
+    const fullMessages = await resolvePhase1Messages(result1);
+
+    if (fullMessages) {
+      if (debug) {
+        console.debug(
+          `[juneau] withToolRecovery → no failure, no text → triggering phase 3 with ${fullMessages.length} messages`
+        );
+      }
+
+      yield* streamToWire(phase3(fullMessages).fullStream, undefined, { debug });
+
+      if (debug) {
+        console.debug('[juneau] withToolRecovery → phase 3 complete');
+      }
+      return;
     }
 
-    yield `data: ${JSON.stringify({ type: 'done' })}\n\n`;
-  } else {
-    // Normal success — text was produced, emit done
-    yield `data: ${JSON.stringify({ type: 'done' })}\n\n`;
+    if (debug) {
+      console.debug(
+        '[juneau] withToolRecovery → phase 3 configured but phase 1 result exposes no message history — emitting done'
+      );
+    }
+  } else if (!producedText && !skillSet.hadFailure && debug) {
+    console.debug(
+      '[juneau] withToolRecovery → no failure, no text, no phase3 — emitting done (Gemini silent response)'
+    );
   }
+
+  yield `data: ${JSON.stringify({ type: 'done' })}\n\n`;
+}
+
+/**
+ * Resolves the full message history (incl. tool-call/tool-result turns) from a
+ * consumed ai-sdk StreamTextResult. ai-sdk v7 exposes it as `response.messages`;
+ * some versions expose a `messages` promise directly. Both resolve only after
+ * the fullStream has been fully consumed, which is guaranteed at the call site.
+ */
+async function resolvePhase1Messages(result: {
+  response?: Promise<{ messages: unknown[] }>;
+  messages?: Promise<unknown[]>;
+}): Promise<unknown[] | null> {
+  if (result.response) {
+    const response = await result.response;
+    if (Array.isArray(response?.messages)) {
+      return response.messages;
+    }
+  }
+
+  if (result.messages) {
+    const messages = await result.messages;
+    if (Array.isArray(messages)) {
+      return messages;
+    }
+  }
+
+  return null;
 }

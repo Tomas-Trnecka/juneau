@@ -160,10 +160,19 @@ tool instead of writing a text response (observed with Gemini 2.5 Flash).
 function withToolRecovery(options: ToolRecoveryOptions): AsyncIterable<string>;
 
 interface ToolRecoveryOptions {
-  phase1: () => { fullStream: AsyncIterable<unknown> };
+  phase1: () => ToolRecoveryStreamResult;
   phase2: (failureContext: string) => { fullStream: AsyncIterable<unknown> };
+  phase3?: (messages: unknown[]) => { fullStream: AsyncIterable<unknown> };
   skillSet: SkillSet;
   debug?: boolean;
+}
+
+// Structural match for ai-sdk v7's StreamTextResult — pass the streamText()
+// result directly, it satisfies this shape.
+interface ToolRecoveryStreamResult {
+  fullStream: AsyncIterable<unknown>;
+  response?: Promise<{ messages: unknown[] }>;  // ai-sdk v7
+  messages?: Promise<unknown[]>;                // some ai-sdk versions
 }
 ```
 
@@ -172,7 +181,14 @@ interface ToolRecoveryOptions {
 **Phase 2:** Triggers only when `hadFailure && !textProduced` — calls the model again without tools,
 injecting `failureContext` as an assistant message to force a text response.
 
-**Silent-success path:** If the tool succeeded but the model emitted no text (`!hadFailure && !textProduced` — a known Gemini 2.5 Flash behaviour with `maxSteps > 1`), phase 2 is **not** triggered. `done` is emitted cleanly. Enable `debug: true` to see this branch logged explicitly so you can diagnose whether the text arrived under an unexpected chunk type or was simply not generated.
+**Phase 3 (silent-success recovery):** Triggers when the tool succeeded but the model emitted no text
+(`!hadFailure && !textProduced`). Confirmed Gemini 2.5 Flash behaviour — the fullStream ends with
+`tool-call → tool-result → finish-step → finish` and **no `text-delta` ever arrives**; Gemini treats
+the tool call as its complete response. `withToolRecovery` resolves the full message history
+(including tool-call and tool-result turns) from the consumed phase 1 result's `response.messages`
+promise and passes it to `phase3`, which should call the model again **without tools** so it is
+forced to summarise the tool result as text. If `phase3` is not provided, `done` is emitted cleanly
+(previous behaviour). Enable `debug: true` to see which branch fires.
 
 **`debug`:** When `true`, logs phase start/complete, the `textProduced` and `hadFailure` values at each decision point, and whether phase 2 is triggered. Passes `debug` down to both `streamToWire` calls so chunk-level logs are also emitted.
 
@@ -190,13 +206,19 @@ async function* streamResponse(messages, context) {
       system,
       messages: sdkMessages,
       tools: skillSet.tools,
-      maxSteps: 1,
+      maxSteps: 2,
     }),
     phase2: (failureContext) => streamText({
       model,
       system,
       messages: [...sdkMessages, { role: 'assistant', content: failureContext }],
       // no tools — model must write text
+    }),
+    phase3: (fullMessages) => streamText({
+      model,
+      system,
+      messages: fullMessages,
+      // no tools — includes tool-call + tool-result turns, model summarises
     }),
     skillSet,
   })) {
@@ -240,5 +262,5 @@ export { toSdkMessages } from './toSdkMessages';
 export { createSkillSet } from './createSkillSet';
 export { streamToWire } from './streamToWire';
 export { withToolRecovery } from './withToolRecovery';
-export type { SkillSet, SkillDefinition, SkillSetOptions, ToolRecoveryOptions, StreamToWireOptions, CoreMessage } from './types';
+export type { SkillSet, SkillDefinition, SkillSetOptions, ToolRecoveryOptions, ToolRecoveryStreamResult, StreamToWireOptions, CoreMessage } from './types';
 ```

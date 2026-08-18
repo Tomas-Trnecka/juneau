@@ -236,7 +236,16 @@ Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all ai-sdk v7 t
 
 #### `withToolRecovery(options)`
 
-Two-phase pattern for Gemini-style tool calls. Phase 1 streams with tools. Phase 2 triggers only when a tool failed **and** no text was produced — it calls the model without tools and injects the failure context to force a text response. Pass `debug: true` to log phase decisions and the `textProduced` / `hadFailure` state at each decision point.
+Multi-phase pattern for Gemini-style tool calls. Phase 1 streams with tools. Phase 2 triggers only when a tool failed **and** no text was produced — it calls the model without tools and injects the failure context to force a text response. Phase 3 (optional) handles the silent-success case — Gemini 2.5 Flash often treats a successful tool call as its complete response and never writes text. When the tool succeeded but no text was produced, `phase3` receives the full phase 1 message history (including tool-call and tool-result turns) so a second model call without tools can summarise the result. Pass `debug: true` to log phase decisions and the `textProduced` / `hadFailure` state at each decision point.
+
+```ts
+yield* withToolRecovery({
+  phase1: () => streamText({ model, system, messages, tools: skillSet.tools, maxSteps: 2 }),
+  phase2: (ctx) => streamText({ model, system, messages: [...messages, { role: 'assistant', content: ctx }] }),
+  phase3: (fullMessages) => streamText({ model, system, messages: fullMessages }), // no tools — forced text
+  skillSet,
+});
+```
 
 ---
 

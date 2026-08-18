@@ -164,14 +164,15 @@ SkillSetOptions: `language?` (default: `'en'`) — selects which label variant t
 Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all ai-sdk v7 text chunk types (`text-delta` and `text`, with `textDelta` v6 fallback). Drains `skillSet.drainActivities()` before each text chunk and once after the loop. Emits `done` event at the end. `options.debug` logs every chunk received.
 
 ### withToolRecovery(options) → AsyncIterable\<string\>
-Two-phase streaming pattern for tool failure recovery (Gemini 2.5 Flash retries tools instead of writing text on failure). Phase 1 streams with tools. If a tool failed and no text was produced, phase 2 calls the model without tools, injecting `failureContext` as an assistant message to force a text response. If the tool succeeded but no text was produced (Gemini silent-response), emits `done` cleanly without triggering phase 2.
+Multi-phase streaming pattern for Gemini 2.5 Flash tool call recovery. Phase 1 streams with tools. If a tool failed and no text was produced, phase 2 calls the model without tools, injecting `failureContext` as an assistant message to force a text response. If the tool succeeded but no text was produced (Gemini treats the tool call as its complete response — confirmed chunk sequence: tool-call → tool-result → finish-step → finish, no text-delta), optional phase 3 receives the full phase 1 message history (resolved from the ai-sdk result's `response.messages` promise, includes tool-call + tool-result turns) and calls the model again without tools to summarise the result. Without `phase3`, emits `done` cleanly (previous behaviour).
 
-Options: `phase1: () => { fullStream }`, `phase2: (failureContext) => { fullStream }`, `skillSet`, `debug?`.
+Options: `phase1: () => ToolRecoveryStreamResult` (pass the streamText result directly — `fullStream` + `response`), `phase2: (failureContext) => { fullStream }`, `phase3?: (messages) => { fullStream }`, `skillSet`, `debug?`.
 
 ```ts
 for await (const chunk of withToolRecovery({
-  phase1: () => streamText({ model, system, messages: sdkMessages, tools: skillSet.tools, maxSteps: 1 }),
+  phase1: () => streamText({ model, system, messages: sdkMessages, tools: skillSet.tools, maxSteps: 2 }),
   phase2: (ctx) => streamText({ model, system, messages: [...sdkMessages, { role: 'assistant', content: ctx }] }),
+  phase3: (fullMessages) => streamText({ model, system, messages: fullMessages }),
   skillSet,
 })) {
   res.write(chunk);
