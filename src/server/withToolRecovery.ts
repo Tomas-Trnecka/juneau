@@ -1,6 +1,14 @@
 import type { ToolRecoveryOptions } from './types';
 import { streamToWire } from './streamToWire';
 
+function wireError(message: string): string {
+  return `data: ${JSON.stringify({ type: 'error', message })}\n\n`;
+}
+
+function wireDone(): string {
+  return `data: ${JSON.stringify({ type: 'done' })}\n\n`;
+}
+
 /**
  * Encapsulates the multi-phase streaming pattern needed for Gemini 2.5 Flash
  * tool call scenarios where the model either fails or silently succeeds without
@@ -17,10 +25,16 @@ import { streamToWire } from './streamToWire';
  * model wrote no text. Confirmed Gemini 2.5 Flash behaviour: the fullStream ends
  * with tool-call → tool-result → finish-step → finish and no text-delta ever
  * arrives — Gemini treats the tool call as its complete response. Phase 3 receives
- * the full phase 1 message history (including tool-call and tool-result turns,
- * resolved from the ai-sdk result's `response`/`messages` promise) so the model
- * can be called again without tools and forced to summarise the tool result.
+ * the full phase 1 message history including tool-call AND tool-result turns —
+ * Gemini rejects histories where a tool-call turn is not immediately followed by
+ * a tool-result turn ("function call turn must come immediately after a user turn
+ * or after a function response turn"). The history is resolved from the consumed
+ * phase 1 result's `messages` promise (ai-sdk v7 — resolves to all turns after
+ * the stream is consumed), with `response.messages` as fallback.
  * If phase3 is not provided, falls back to emitting done (previous behaviour).
+ *
+ * Errors thrown by phase 2 / phase 3 model calls are surfaced as wire error
+ * events — never swallowed into a silent done.
  *
  * @returns AsyncIterable<string> of Juneau wire SSE strings (activities + text + done)
  */
@@ -61,13 +75,21 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
       console.debug('[juneau] withToolRecovery → hadFailure=true, textProduced=false → triggering phase 2');
     }
 
-    const result2 = phase2(skillSet.failureContext);
+    try {
+      const result2 = phase2(skillSet.failureContext);
 
-    // Phase 2 has no skillSet — plain text response, no tool calls expected
-    yield* streamToWire(result2.fullStream, undefined, { debug });
+      // Phase 2 has no skillSet — plain text response, no tool calls expected
+      yield* streamToWire(result2.fullStream, undefined, { debug });
 
-    if (debug) {
-      console.debug('[juneau] withToolRecovery → phase 2 complete');
+      if (debug) {
+        console.debug('[juneau] withToolRecovery → phase 2 complete');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (debug) {
+        console.debug(`[juneau] withToolRecovery → phase 2 FAILED: "${message}"`);
+      }
+      yield wireError(message);
     }
     return;
   }
@@ -81,14 +103,29 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
     if (fullMessages) {
       if (debug) {
         console.debug(
-          `[juneau] withToolRecovery → no failure, no text → triggering phase 3 with ${fullMessages.length} messages`
+          `[juneau] withToolRecovery → phase 3 messages resolved (${fullMessages.length}):`,
+          JSON.stringify(fullMessages, null, 2)
         );
+        if (!containsToolResult(fullMessages)) {
+          console.debug(
+            '[juneau] withToolRecovery → WARNING: resolved history contains no tool-result turn — Gemini will likely reject it as an invalid conversation structure'
+          );
+        }
+        console.debug('[juneau] withToolRecovery → no failure, no text → triggering phase 3');
       }
 
-      yield* streamToWire(phase3(fullMessages).fullStream, undefined, { debug });
+      try {
+        yield* streamToWire(phase3(fullMessages).fullStream, undefined, { debug });
 
-      if (debug) {
-        console.debug('[juneau] withToolRecovery → phase 3 complete');
+        if (debug) {
+          console.debug('[juneau] withToolRecovery → phase 3 complete');
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (debug) {
+          console.debug(`[juneau] withToolRecovery → phase 3 FAILED: "${message}"`);
+        }
+        yield wireError(message);
       }
       return;
     }
@@ -104,32 +141,57 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
     );
   }
 
-  yield `data: ${JSON.stringify({ type: 'done' })}\n\n`;
+  yield wireDone();
 }
 
 /**
  * Resolves the full message history (incl. tool-call/tool-result turns) from a
- * consumed ai-sdk StreamTextResult. ai-sdk v7 exposes it as `response.messages`;
- * some versions expose a `messages` promise directly. Both resolve only after
- * the fullStream has been fully consumed, which is guaranteed at the call site.
+ * consumed ai-sdk StreamTextResult.
+ *
+ * ai-sdk v7: `result.messages` is the promise that resolves to ALL turns —
+ * user, assistant(tool-call), tool(tool-result) — after the stream is consumed.
+ * `result.response.messages` may resolve to an incomplete subset (observed:
+ * tool-call turn without the following tool-result turn, which Gemini rejects),
+ * so it is only used as a fallback when `messages` is unavailable.
+ *
+ * Both promises resolve only after the fullStream has been fully consumed,
+ * which is guaranteed at the call site.
  */
 async function resolvePhase1Messages(result: {
-  response?: Promise<{ messages: unknown[] }>;
   messages?: Promise<unknown[]>;
+  response?: Promise<{ messages?: unknown[] }>;
 }): Promise<unknown[] | null> {
-  if (result.response) {
-    const response = await result.response;
-    if (Array.isArray(response?.messages)) {
-      return response.messages;
-    }
-  }
-
   if (result.messages) {
     const messages = await result.messages;
-    if (Array.isArray(messages)) {
+    if (Array.isArray(messages) && messages.length > 0) {
       return messages;
     }
   }
 
+  if (result.response) {
+    const response = await result.response;
+    if (Array.isArray(response?.messages) && response.messages.length > 0) {
+      return response.messages;
+    }
+  }
+
   return null;
+}
+
+/**
+ * Checks whether the resolved history contains a tool-result turn — either as
+ * a `role: 'tool'` message or a content part with `type: 'tool-result'`.
+ * Used only for the debug warning; the messages themselves are passed through opaquely.
+ */
+function containsToolResult(messages: unknown[]): boolean {
+  return messages.some((m) => {
+    const msg = m as { role?: string; content?: unknown };
+    if (msg.role === 'tool') return true;
+    if (Array.isArray(msg.content)) {
+      return msg.content.some(
+        (part) => (part as { type?: string }).type === 'tool-result'
+      );
+    }
+    return false;
+  });
 }

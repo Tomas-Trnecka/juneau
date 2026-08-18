@@ -55,12 +55,17 @@ export interface SkillSetOptions {
 export interface ToolRecoveryStreamResult {
   fullStream: AsyncIterable<unknown>;
   /**
-   * ai-sdk v7: resolves after the stream is consumed to the response metadata,
-   * including the full message history (tool calls + tool results).
+   * ai-sdk v7: resolves after the stream is consumed to the FULL message
+   * history — user, assistant(tool-call), and tool(tool-result) turns.
+   * Preferred source for phase 3; Gemini rejects histories where a tool-call
+   * turn is not followed by its tool-result turn.
    */
-  response?: Promise<{ messages: unknown[] }>;
-  /** Some ai-sdk versions expose the message history directly. */
   messages?: Promise<unknown[]>;
+  /**
+   * Fallback only — may resolve to an incomplete subset of the history
+   * (observed: missing tool-result turns). Used when `messages` is unavailable.
+   */
+  response?: Promise<{ messages?: unknown[] }>;
 }
 
 export interface ToolRecoveryOptions {

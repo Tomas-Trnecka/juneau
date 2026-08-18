@@ -171,8 +171,8 @@ interface ToolRecoveryOptions {
 // result directly, it satisfies this shape.
 interface ToolRecoveryStreamResult {
   fullStream: AsyncIterable<unknown>;
-  response?: Promise<{ messages: unknown[] }>;  // ai-sdk v7
-  messages?: Promise<unknown[]>;                // some ai-sdk versions
+  messages?: Promise<unknown[]>;                  // preferred — resolves to ALL turns incl. tool-result
+  response?: Promise<{ messages?: unknown[] }>;   // fallback only — may miss tool-result turns
 }
 ```
 
@@ -185,10 +185,20 @@ injecting `failureContext` as an assistant message to force a text response.
 (`!hadFailure && !textProduced`). Confirmed Gemini 2.5 Flash behaviour — the fullStream ends with
 `tool-call → tool-result → finish-step → finish` and **no `text-delta` ever arrives**; Gemini treats
 the tool call as its complete response. `withToolRecovery` resolves the full message history
-(including tool-call and tool-result turns) from the consumed phase 1 result's `response.messages`
-promise and passes it to `phase3`, which should call the model again **without tools** so it is
-forced to summarise the tool result as text. If `phase3` is not provided, `done` is emitted cleanly
-(previous behaviour). Enable `debug: true` to see which branch fires.
+(including tool-call and tool-result turns) from the consumed phase 1 result's **`messages`** promise
+(ai-sdk v7 — resolves to all turns after the stream is consumed; `response.messages` is used only as
+a fallback because it may resolve to an incomplete subset missing tool-result turns, which Gemini
+rejects with "function call turn must come immediately after a user turn or after a function response
+turn"). The resolved history is passed to `phase3`, which should call the model again **without
+tools** so it is forced to summarise the tool result as text. If `phase3` is not provided, `done` is
+emitted cleanly (previous behaviour).
+
+**Error surfacing:** Errors thrown by phase 2 / phase 3 model calls are emitted as Juneau wire
+`error` events — never swallowed into a silent `done`.
+
+**Debug output:** `debug: true` logs which branch fires, the full resolved phase 3 message array
+(so you can verify the tool-result turn is present), a warning when the resolved history contains
+no tool-result turn, and any phase 2/3 failure with its error message.
 
 **`debug`:** When `true`, logs phase start/complete, the `textProduced` and `hadFailure` values at each decision point, and whether phase 2 is triggered. Passes `debug` down to both `streamToWire` calls so chunk-level logs are also emitted.
 
