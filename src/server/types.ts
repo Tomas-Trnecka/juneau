@@ -14,10 +14,30 @@ export interface SkillExecuteContext {
 }
 
 /**
- * A single skill definition — description, zod input schema, i18n labels, and the execute fn.
+ * A single skill definition — metadata, zod input schema, i18n labels, and the execute fn.
+ *
+ * `description` is the tool description the model uses for tool selection.
+ * `instructions` is the "how to behave after calling this" workflow text —
+ * injected into the prompt only when the skill is relevant (see selectSkills).
  */
 export interface SkillDefinition<TInput extends ZodType = ZodType> {
+  /** Human-readable name, e.g. "Invoice Search". Used by buildSkillIndex. */
+  title: string;
   description: string;
+  /**
+   * Workflow instructions for the agent — separate from description. Loaded
+   * lazily via selectSkills() only for skills the model actually called.
+   */
+  instructions?: string;
+  /** False means the skill mutates data. Default: true. */
+  readOnly?: boolean;
+  /** True means the skill should emit a proposal before acting. Default: false. */
+  requiresConfirmation?: boolean;
+  /**
+   * Future-proofing for skill composition — names of other skills this skill
+   * depends on. Validated at createSkillSet() time against the skill map keys.
+   */
+  tools?: string[];
   input: TInput;
   labels: {
     running: { cs: string; en: string };
@@ -33,6 +53,16 @@ export interface SkillDefinition<TInput extends ZodType = ZodType> {
 export interface SkillSet {
   /** ai-sdk ToolSet — pass directly to streamText({ tools }) */
   tools: Record<string, unknown>;
+
+  /** The original skill definitions — used by buildSkillIndex / selectSkills. */
+  skills: Record<string, SkillDefinition>;
+
+  /**
+   * Names of skills the model actually called, in call order (deduplicated).
+   * Populated during phase 1 execution — pass to selectSkills() to load
+   * workflow instructions lazily for phase 3.
+   */
+  calledSkillNames: string[];
 
   /**
    * Returns and clears all buffered activity wire SSE strings.

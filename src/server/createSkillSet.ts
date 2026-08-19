@@ -21,10 +21,33 @@ function pickLabel(labels: { cs: string; en: string }, language: string): string
  * argument with an `emit(part)` callback — parts are pushed into the same
  * buffer as activities and drained by streamToWire at the same points.
  */
+/**
+ * Validates skill definitions at startup — throws immediately (not at runtime)
+ * so a broken registry fails the server boot, not a user request.
+ */
+function validateSkills(skills: SkillMap): void {
+  const knownNames = new Set(Object.keys(skills));
+
+  for (const [name, skill] of Object.entries(skills)) {
+    if (!skill.tools) continue;
+    for (const toolName of skill.tools) {
+      if (!knownNames.has(toolName)) {
+        throw new Error(
+          `[juneau] createSkillSet: skill "${name}" references unknown tool "${toolName}". ` +
+            `Known skills: ${[...knownNames].join(', ')}`
+        );
+      }
+    }
+  }
+}
+
 export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}): SkillSet {
+  validateSkills(skills);
+
   const language = options.language ?? 'en';
   const debug = options.debug ?? false;
   const activityBuffer: string[] = [];
+  const calledSkillNames: string[] = [];
   let hadFailure = false;
   let failureContext: string | null = null;
 
@@ -35,6 +58,10 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
       description: skill.description,
       parameters: skill.input,
       execute: async (input: unknown) => {
+        if (!calledSkillNames.includes(name)) {
+          calledSkillNames.push(name);
+        }
+
         if (debug) {
           console.debug(`[juneau] skill "${name}" → executing, input:`, input);
         }
@@ -114,6 +141,10 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
 
   return {
     tools,
+
+    skills,
+
+    calledSkillNames,
 
     drainActivities(): string[] {
       return activityBuffer.splice(0, activityBuffer.length);

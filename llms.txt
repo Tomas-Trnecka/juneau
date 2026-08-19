@@ -161,7 +161,7 @@ Shared parser utility: `parseJuneauWire(raw: string): AiStreamEvent[]` — used 
 Node-only helpers for Juneau-compatible backends. Import from the `/server` subpath (keeps zod out of the browser bundle):
 
 ```ts
-import { toSdkMessages, createSkillSet, streamToWire, withToolRecovery } from 'juneau/server';
+import { toSdkMessages, createSkillSet, buildSkillIndex, selectSkills, streamToWire, withToolRecovery } from 'juneau/server';
 ```
 
 ### toSdkMessages(messages: AiMessage[]): CoreMessage[]
@@ -170,7 +170,15 @@ Converts Juneau message history to ai-sdk's CoreMessage format. Extracts text pa
 ### createSkillSet(skills, options?) → SkillSet
 Wraps skill definitions into ai-sdk tool definitions with a built-in activity event buffer. Each tool call automatically emits `running`, `done`, and `failed` Juneau wire SSE strings into the buffer.
 
-SkillDefinition fields: `description`, `input` (ZodType), `labels.running`, `labels.done`, `labels.failed?`, `execute(input, { emit })`.
+SkillDefinition fields: `title`, `description`, `instructions?` (workflow text, lazily loaded via selectSkills), `readOnly?` (default true), `requiresConfirmation?` (default false), `tools?` (skill composition — validated at startup, throws on unknown reference), `input` (ZodType), `labels.running`, `labels.done`, `labels.failed?`, `execute(input, { emit })`.
+
+SkillSet also exposes `skills` (original definitions) and `calledSkillNames` (skills the model called during phase 1, deduplicated, in call order).
+
+### buildSkillIndex(skillSet) → string
+Compact one-liner-per-skill index for the system prompt: `- invoiceSearch (read): Find invoices…` / `- invoiceApprove (write, requires confirmation): …`. Registry-driven — adding a skill updates the index automatically.
+
+### selectSkills(skillSet, skillNames) → string
+Concatenated `instructions` for the given skill names (typically `skillSet.calledSkillNames` after phase 1). Lazy loading: full workflow instructions enter the prompt only for skills the model actually used. Unknown names and skills without instructions are skipped; returns `''` when nothing matches.
 
 `execute` receives a `SkillExecuteContext` as second argument: `emit(part)` pushes a custom part wire event (`{ type: 'part', part }`) into the same buffer as activities — drained by `streamToWire` at the same points. Available synchronously at any point during execution. Use to stream rich widgets (e.g. invoice cards) alongside the tool result:
 

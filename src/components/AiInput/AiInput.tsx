@@ -1,4 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   IconPaperPlane,
   IconPaperclip,
@@ -39,6 +40,18 @@ type Props = {
 
 export function AiInput({ value, onChange, onSend, onStop, isLoading, placeholder, actions, sendIcon }: Props) {
   const labels = useLabels();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const wasLoadingRef = useRef(false);
+
+  // Restore focus when streaming finishes. The textarea stays enabled during
+  // streaming so the user can keep typing, but if focus was lost anyway
+  // (e.g. the user clicked the stop button), give it back.
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      textareaRef.current?.focus();
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   const defaultActions: AiInputAction[] = [
     { icon: <IconPaperclip />,        label: labels.actionAddFile },
@@ -53,20 +66,22 @@ export function AiInput({ value, onChange, onSend, onStop, isLoading, placeholde
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSend();
+      // Typing stays enabled during streaming, but Enter must not send —
+      // useAiChat also guards this, this is just belt and braces.
+      if (!isLoading) onSend();
     }
   };
 
   return (
     <div className={styles.wrapper}>
       <textarea
+        ref={textareaRef}
         className={styles.textarea}
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder ?? labels.inputPlaceholder}
         rows={3}
-        disabled={isLoading}
         aria-label={labels.sendMessage}
       />
 

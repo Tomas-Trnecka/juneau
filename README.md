@@ -187,7 +187,7 @@ export const myAdapter: AiBackendAdapter = {
 If your backend uses ai-sdk, Juneau ships server-side helpers that eliminate the boilerplate of history mapping, activity streaming, and tool failure recovery. Import from the `/server` subpath — zod stays out of the browser bundle.
 
 ```ts
-import { toSdkMessages, createSkillSet, withToolRecovery } from 'juneau/server';
+import { toSdkMessages, createSkillSet, buildSkillIndex, selectSkills, withToolRecovery } from 'juneau/server';
 ```
 
 **Full integration in ~15 lines:**
@@ -199,7 +199,9 @@ import { z } from 'zod';
 
 const skillSet = createSkillSet({
   search: {
+    title: 'Record Search',
     description: 'Search for records.',
+    instructions: 'Present results concisely. If cards are shown, write one sentence only.',
     input: z.object({ query: z.string() }),
     labels: {
       running: { en: 'Searching…',    cs: 'Vyhledávám…' },
@@ -238,9 +240,24 @@ execute: async ({ query }, { emit }) => {
 
 Emitted parts share the activity buffer and are drained by `streamToWire` at the same points — they appear in the stream in emit order, before the model's text response.
 
-`SkillSet` members: `tools`, `drainActivities()`, `hadFailure`, `failureContext`.
+Skill metadata: `title` (human-readable name), `instructions?` (agent workflow text — lazily loaded via `selectSkills`), `readOnly?` (default `true`), `requiresConfirmation?` (default `false`), `tools?` (skill composition — validated at startup, `createSkillSet` throws on a reference to an unknown skill).
+
+`SkillSet` members: `tools`, `skills`, `calledSkillNames`, `drainActivities()`, `hadFailure`, `failureContext`.
 
 `SkillSetOptions`: `language?` — selects label variant (`'en'` default). `debug?` — emit `console.debug` logs per skill execution (default: `false`).
+
+#### `buildSkillIndex(skillSet)`
+
+Generates a compact one-liner-per-skill index for the system prompt — registry-driven, so the prompt never drifts from the actual skills:
+
+```
+- invoiceSearch (read): Find invoices by number, supplier, date, or status.
+- invoiceApprove (write, requires confirmation): Approve an invoice.
+```
+
+#### `selectSkills(skillSet, skillNames)`
+
+Returns concatenated `instructions` for the given skill names — typically `skillSet.calledSkillNames` after phase 1, injected into phase 3's system prompt. Workflow instructions load lazily, only for skills the model actually used.
 
 #### `streamToWire(fullStream, skillSet?, options?)`
 

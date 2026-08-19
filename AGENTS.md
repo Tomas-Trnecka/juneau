@@ -228,7 +228,9 @@ Exported from the `/server` subpath — Node-only, never imported by browser cod
 | Export | Description |
 |---|---|
 | `toSdkMessages(messages)` | Converts `AiMessage[]` to `CoreMessage[]` for ai-sdk. Fixes alternation, extracts text parts. |
-| `createSkillSet(skills, options?)` | Returns `SkillSet` — ai-sdk `tools` + activity event buffer. Auto-emits `running`/`done`/`failed` wire events. Skill `execute(input, { emit })` can push custom part wire events into the same buffer. |
+| `createSkillSet(skills, options?)` | Returns `SkillSet` — ai-sdk `tools` + activity event buffer + `skills` + `calledSkillNames`. Auto-emits `running`/`done`/`failed` wire events. Skill `execute(input, { emit })` can push custom part wire events into the same buffer. Validates `tools?` references at startup — throws on unknown skill names. Skill metadata: `title`, `instructions?`, `readOnly?`, `requiresConfirmation?`, `tools?`. |
+| `buildSkillIndex(skillSet)` | Compact one-liner-per-skill index string for the system prompt — `- name (read/write[, requires confirmation]): description`. |
+| `selectSkills(skillSet, names)` | Concatenated `instructions` for the given skill names (typically `calledSkillNames` after phase 1) — lazy instruction loading for phase 3. |
 | `streamToWire(fullStream, skillSet?, options?)` | Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all v7 text chunk types (`text-delta` and `text`), drains activity buffer, emits `done`. `options.debug` logs every chunk. |
 | `withToolRecovery(options)` | Multi-phase streaming: phase 1 with tools; phase 2 without tools (failure recovery) if a tool failed and no text was produced; optional phase 3 (silent-success recovery) if the tool succeeded but no text was produced — receives the full phase 1 message history (resolved from the ai-sdk result's `messages` promise, incl. tool-call + tool-result turns) so the model can summarise. Phase 2/3 errors surface as wire `error` events. `debug` logs all decision points and the resolved phase 3 history. |
 

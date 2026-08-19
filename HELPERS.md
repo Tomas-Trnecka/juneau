@@ -56,7 +56,12 @@ function createSkillSet(skills: Record<string, SkillDefinition>, options?: Skill
 **`SkillDefinition`:**
 ```ts
 interface SkillDefinition<TInput extends ZodType = ZodType> {
-  description: string;
+  title: string;                            // human-readable name, e.g. "Invoice Search"
+  description: string;                      // tool description — used by the model for tool selection
+  instructions?: string;                    // workflow instructions for the agent — loaded lazily via selectSkills()
+  readOnly?: boolean;                       // false = mutates data. Default: true
+  requiresConfirmation?: boolean;           // true = emit a proposal before acting. Default: false
+  tools?: string[];                         // skill composition (future) — validated against skill map keys at startup
   input: TInput;                            // Zod schema — used as ai-sdk tool parameters
   labels: {
     running: { cs: string; en: string };
@@ -95,11 +100,50 @@ interface SkillSetOptions {
 **`SkillSet`:**
 ```ts
 interface SkillSet {
-  tools: Record<string, unknown>;   // pass directly to streamText({ tools })
-  drainActivities(): string[];      // returns and clears buffered Juneau wire SSE strings
-  hadFailure: boolean;              // true if any tool call threw during this invocation
-  failureContext: string | null;    // human-readable error description for recovery prompts
+  tools: Record<string, unknown>;           // pass directly to streamText({ tools })
+  skills: Record<string, SkillDefinition>;  // the original definitions — used by buildSkillIndex / selectSkills
+  calledSkillNames: string[];               // skills the model actually called, in call order (deduplicated)
+  drainActivities(): string[];              // returns and clears buffered Juneau wire SSE strings
+  hadFailure: boolean;                      // true if any tool call threw during this invocation
+  failureContext: string | null;            // human-readable error description for recovery prompts
 }
+```
+
+**Validation:** `createSkillSet` throws at startup (not at runtime) when a skill's `tools` array
+references a name not present in the skill map — a broken registry fails server boot, not a user request.
+
+---
+
+## `buildSkillIndex(skillSet)`
+
+Generates a compact one-liner-per-skill index for the system prompt. Inject the output instead of
+hand-maintaining a skill list — adding a skill to the registry updates the index automatically.
+
+```ts
+function buildSkillIndex(skillSet: SkillSet): string;
+```
+
+```
+- invoiceSearch (read): Find invoices by number, supplier, date, or status.
+- invoiceApprove (write, requires confirmation): Approve an invoice.
+```
+
+---
+
+## `selectSkills(skillSet, skillNames)`
+
+The lazy-loading half of the skill format — returns the concatenated `instructions` for the given
+skill names (typically `skillSet.calledSkillNames` after phase 1). Skills without instructions and
+unknown names are skipped; returns `''` when nothing matches. Full workflow instructions enter the
+prompt only for skills the model actually used.
+
+```ts
+function selectSkills(skillSet: SkillSet, skillNames: string[]): string;
+```
+
+```ts
+// After phase 1, inject into phase 3's system prompt:
+const instructions = selectSkills(skillSet, skillSet.calledSkillNames);
 ```
 
 **Example:**
@@ -287,6 +331,7 @@ Exported from the `/server` subpath to keep zod and server-only code out of the 
 // src/server/index.ts
 export { toSdkMessages } from './toSdkMessages';
 export { createSkillSet } from './createSkillSet';
+export { buildSkillIndex, selectSkills } from './skillIndex';
 export { streamToWire } from './streamToWire';
 export { withToolRecovery } from './withToolRecovery';
 export type { SkillSet, SkillDefinition, SkillExecuteContext, SkillSetOptions, ToolRecoveryOptions, ToolRecoveryStreamResult, StreamToWireOptions, CoreMessage } from './types';
