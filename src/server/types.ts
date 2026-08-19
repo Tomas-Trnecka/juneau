@@ -1,6 +1,19 @@
 import type { ZodType, z } from 'zod';
 
 /**
+ * Helpers injected into a skill's execute fn as the second argument.
+ */
+export interface SkillExecuteContext {
+  /**
+   * Emits a custom part wire event directly into the stream, alongside the
+   * automatic running/done/failed activities. Available synchronously at any
+   * point during execution — parts appear in the stream in emit order.
+   * The part is wrapped as { type: 'part', part } on the wire.
+   */
+  emit: (part: { type: string; [key: string]: unknown }) => void;
+}
+
+/**
  * A single skill definition — description, zod input schema, i18n labels, and the execute fn.
  */
 export interface SkillDefinition<TInput extends ZodType = ZodType> {
@@ -11,7 +24,7 @@ export interface SkillDefinition<TInput extends ZodType = ZodType> {
     done:    { cs: string; en: string };
     failed?: { cs: string; en: string };
   };
-  execute: (input: z.infer<TInput>) => Promise<unknown>;
+  execute: (input: z.infer<TInput>, context: SkillExecuteContext) => Promise<unknown>;
 }
 
 /**

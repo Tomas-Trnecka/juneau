@@ -63,8 +63,25 @@ interface SkillDefinition<TInput extends ZodType = ZodType> {
     done:    { cs: string; en: string };
     failed?: { cs: string; en: string };    // defaults to 'Nepodařilo se' / 'Failed'
   };
-  execute: (input: z.infer<TInput>) => Promise<unknown>;
+  execute: (input: z.infer<TInput>, context: SkillExecuteContext) => Promise<unknown>;
 }
+
+interface SkillExecuteContext {
+  // Emits a custom part wire event ({ type: 'part', part }) into the same
+  // buffer as activities — drained by streamToWire at the same points.
+  // Available synchronously at any point during execution.
+  emit: (part: { type: string; [key: string]: unknown }) => void;
+}
+```
+
+**Emitting custom parts from a skill:**
+```ts
+execute: async ({ query }, { emit }) => {
+  const inv = await db.findInvoice(query);
+  // Streamed to the frontend immediately — rendered via the renderPart prop
+  emit({ type: 'invoice-card', invoiceNumber: inv.number, amount: inv.total });
+  return { found: 1, invoice: inv }; // returned to the model as the tool result
+},
 ```
 
 **`SkillSetOptions`:**
@@ -272,5 +289,5 @@ export { toSdkMessages } from './toSdkMessages';
 export { createSkillSet } from './createSkillSet';
 export { streamToWire } from './streamToWire';
 export { withToolRecovery } from './withToolRecovery';
-export type { SkillSet, SkillDefinition, SkillSetOptions, ToolRecoveryOptions, ToolRecoveryStreamResult, StreamToWireOptions, CoreMessage } from './types';
+export type { SkillSet, SkillDefinition, SkillExecuteContext, SkillSetOptions, ToolRecoveryOptions, ToolRecoveryStreamResult, StreamToWireOptions, CoreMessage } from './types';
 ```

@@ -80,6 +80,21 @@
 .markdown h3,
 .markdown h4 { font-size: var(--juneau-font-size-md); }
 
+/* Dev-only fallback for custom part types with no renderPart handler */
+.unknownPart {
+  border: 1px dashed var(--juneau-color-warning-text);
+  background: var(--juneau-color-warning-bg);
+  color: var(--juneau-color-warning-text);
+  border-radius: var(--juneau-radius-sm);
+  padding: 6px 10px;
+  font-size: var(--juneau-font-size-sm);
+}
+
+.unknownPart code {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  font-size: 0.9em;
+}
+
 .errorText {
   display: inline-flex;
   align-items: center;

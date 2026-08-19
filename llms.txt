@@ -34,12 +34,25 @@ Returns: `messages`, `input`, `setInput`, `sendMessage`, `sendMessageWithText`, 
 
 ### AiSidebar
 Fixed-position overlay panel, bottom-right, reads from AiChatProvider.
-Props: `title?`, `icon?`, `actions?`, `sendIcon?`, `height?` (default: '60vh'), `className?`, `style?`
+Props: `title?`, `icon?`, `actions?`, `sendIcon?`, `height?` (default: '60vh'), `onReset?`, `renderPart?`, `className?`, `style?`
 Has minimize/restore button. Minimized = compact header bar at bottom-right. Animated transition.
 
 ### AiChat
 Headless chat body (message list + input + error). Requires explicit props from useAiChat.
-Use when embedding chat in a custom layout instead of using AiSidebar.
+Use when embedding chat in a custom layout instead of using AiSidebar. Also accepts `renderPart?`.
+
+### renderPart — custom part renderer escape hatch
+`RenderPartFn = (part: AiMessagePart) => ReactNode | null | undefined`
+Called before the built-in renderers for every part. Non-nullish return wins (can override built-ins too); null/undefined falls through. Receives the raw part with no narrowing — consumer owns type assertions:
+
+```tsx
+<AiSidebar renderPart={part => {
+  if (part.type === 'invoice-card') return <InvoiceCard part={part as InvoiceCardPart} />;
+  return null; // fall through to built-ins
+}} />
+```
+
+Threaded down: AiSidebar/AiChat → AiMessageList → AiMessageBubble → AiMessagePartRenderer.
 
 ### AiChatHeader
 Props: `title?`, `icon?`, `onMinimize?`, `isMinimized?`
@@ -91,7 +104,10 @@ AiMessagePart =
   | { type: 'proposal'; proposal: AiProposal }
   | { type: 'activity'; id?: string; title: string; description?: string; status: 'running' | 'done' | 'failed'; metadata?: Record<string, unknown> }
   | { type: 'error'; message: string }
+  | AiCustomPart   // { type: string; [key: string]: unknown } — consumer-defined, rendered via renderPart
 ```
+
+Custom parts (any `type` string not matching a built-in) flow through the wire protocol and message state untouched. Render them via the `renderPart` prop on `AiSidebar` / `AiChat`. Juneau applies no validation or narrowing — the consumer owns all type assertions. Unhandled custom parts show a dashed warning outline in dev, render nothing in production.
 
 Activity parts with a stable `id` update in-place when a new part with the same `id` arrives. Without `id`, they append as a timeline.
 
@@ -154,7 +170,17 @@ Converts Juneau message history to ai-sdk's CoreMessage format. Extracts text pa
 ### createSkillSet(skills, options?) → SkillSet
 Wraps skill definitions into ai-sdk tool definitions with a built-in activity event buffer. Each tool call automatically emits `running`, `done`, and `failed` Juneau wire SSE strings into the buffer.
 
-SkillDefinition fields: `description`, `input` (ZodType), `labels.running`, `labels.done`, `labels.failed?`, `execute`.
+SkillDefinition fields: `description`, `input` (ZodType), `labels.running`, `labels.done`, `labels.failed?`, `execute(input, { emit })`.
+
+`execute` receives a `SkillExecuteContext` as second argument: `emit(part)` pushes a custom part wire event (`{ type: 'part', part }`) into the same buffer as activities — drained by `streamToWire` at the same points. Available synchronously at any point during execution. Use to stream rich widgets (e.g. invoice cards) alongside the tool result:
+
+```ts
+execute: async ({ query }, { emit }) => {
+  const inv = await db.findInvoice(query);
+  emit({ type: 'invoice-card', invoiceNumber: inv.number, amount: inv.total });
+  return { found: 1, invoice: inv }; // returned to model as tool result
+}
+```
 
 SkillSet fields: `tools` (pass to streamText), `drainActivities()` (returns and clears buffered SSE strings), `hadFailure`, `failureContext`.
 
@@ -206,7 +232,9 @@ useEffect(() => {
 
 ## Exports
 
-Types: `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiTextPart`, `AiTablePartType`, `AiProposalPart`, `AiProposal`, `AiActivityPartType`, `AiActivityStatus`, `AiErrorPart`, `AiBackendAdapter`, `AiAdapterInput`, `AiStreamEvent`, `AiStreamTextEvent`, `AiStreamPartEvent`, `AiStreamDoneEvent`, `AiStreamErrorEvent`, `JuneauWireEvent`, `JuneauWireText`, `JuneauWireActivity`, `JuneauWirePart`, `JuneauWireDone`, `JuneauWireError`, `JuneauTheme`, `JuneauLabels`, `AiInputAction`, `UseAiChatOptions`, `UseAiChatReturn`, `AiChatContextValue`
+Types: `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiCustomPart`, `AiTextPart`, `AiTablePartType`, `AiProposalPart`, `AiProposal`, `AiActivityPartType`, `AiActivityStatus`, `AiErrorPart`, `AiBackendAdapter`, `AiAdapterInput`, `AiStreamEvent`, `AiStreamTextEvent`, `AiStreamPartEvent`, `AiStreamDoneEvent`, `AiStreamErrorEvent`, `JuneauWireEvent`, `JuneauWireText`, `JuneauWireActivity`, `JuneauWirePart`, `JuneauWireDone`, `JuneauWireError`, `JuneauTheme`, `JuneauLabels`, `AiInputAction`, `RenderPartFn`, `UseAiChatOptions`, `UseAiChatReturn`, `AiChatContextValue`
+
+Components now exported: `AiSidebar`, `AiChat`, `AiMessageList`, `AiMessageBubble`, `AiInput`, `AiTypingIndicator`, `AiError`, `AiMessagePartRenderer`, `AiTablePart`, `AiProposalCard`, `AiActivityPart`
 
 Utilities: `consumeStream`, `delay`, `getMessageText`
 

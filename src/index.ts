@@ -3,6 +3,7 @@ export type {
   AiMessage,
   AiMessageRole,
   AiMessagePart,
+  AiCustomPart,
   AiTextPart,
   AiTablePart as AiTablePartType,
   AiProposalPart,
@@ -53,6 +54,7 @@ export { juneauCs } from './i18n/locales/cs';
 
 // ─── Components ───────────────────────────────────────────────────────────────
 export { AiSidebar } from './components/AiSidebar/AiSidebar';
+export { AiChat } from './components/AiChat/AiChat';
 export { AiMessageList } from './components/AiMessageList/AiMessageList';
 export { AiMessageBubble } from './components/AiMessageBubble/AiMessageBubble';
 export { AiInput } from './components/AiInput/AiInput';
@@ -60,6 +62,7 @@ export type { AiInputAction } from './components/AiInput/AiInput';
 export { AiTypingIndicator } from './components/AiTypingIndicator/AiTypingIndicator';
 export { AiError } from './components/AiError/AiError';
 export { AiMessagePartRenderer } from './components/parts/AiMessagePartRenderer';
+export type { RenderPartFn } from './components/parts/AiMessagePartRenderer';
 export { AiTablePart } from './components/parts/AiTablePart';
 export { AiProposalCard } from './components/parts/AiProposalCard';
 export { AiActivityPart } from './components/parts/AiActivityPart';

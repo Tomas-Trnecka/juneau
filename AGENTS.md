@@ -228,11 +228,15 @@ Exported from the `/server` subpath — Node-only, never imported by browser cod
 | Export | Description |
 |---|---|
 | `toSdkMessages(messages)` | Converts `AiMessage[]` to `CoreMessage[]` for ai-sdk. Fixes alternation, extracts text parts. |
-| `createSkillSet(skills, options?)` | Returns `SkillSet` — ai-sdk `tools` + activity event buffer. Auto-emits `running`/`done`/`failed` wire events. |
+| `createSkillSet(skills, options?)` | Returns `SkillSet` — ai-sdk `tools` + activity event buffer. Auto-emits `running`/`done`/`failed` wire events. Skill `execute(input, { emit })` can push custom part wire events into the same buffer. |
 | `streamToWire(fullStream, skillSet?, options?)` | Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all v7 text chunk types (`text-delta` and `text`), drains activity buffer, emits `done`. `options.debug` logs every chunk. |
 | `withToolRecovery(options)` | Multi-phase streaming: phase 1 with tools; phase 2 without tools (failure recovery) if a tool failed and no text was produced; optional phase 3 (silent-success recovery) if the tool succeeded but no text was produced — receives the full phase 1 message history (resolved from the ai-sdk result's `messages` promise, incl. tool-call + tool-result turns) so the model can summarise. Phase 2/3 errors surface as wire `error` events. `debug` logs all decision points and the resolved phase 3 history. |
 
-Exported types: `SkillSet`, `SkillDefinition`, `SkillSetOptions`, `ToolRecoveryOptions`, `ToolRecoveryStreamResult`, `StreamToWireOptions`, `CoreMessage`.
+Exported types: `SkillSet`, `SkillDefinition`, `SkillExecuteContext`, `SkillSetOptions`, `ToolRecoveryOptions`, `ToolRecoveryStreamResult`, `StreamToWireOptions`, `CoreMessage`.
+
+### Custom part rendering
+
+`AiMessagePart` includes `AiCustomPart` (`{ type: string; [key: string]: unknown }`) — consumer-defined part types flow through the wire protocol and message state untouched. `AiSidebar` and `AiChat` accept a `renderPart?: RenderPartFn` prop, threaded down through `AiMessageList` → `AiMessageBubble` → `AiMessagePartRenderer`. It is called before the built-in switch; a non-nullish return wins (can override built-ins). Juneau applies no validation or narrowing to custom parts — the consumer owns all type assertions. Unhandled custom parts render a dashed warning outline in dev, nothing in production.
 
 ---
 

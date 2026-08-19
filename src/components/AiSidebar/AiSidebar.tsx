@@ -4,6 +4,7 @@ import { useAiChatContext } from '../../context/AiChatContext';
 import type { AiInputAction } from '../AiInput/AiInput';
 import { AiChat } from '../AiChat/AiChat';
 import { AiChatHeader } from '../AiChatHeader/AiChatHeader';
+import type { RenderPartFn } from '../parts/AiMessagePartRenderer';
 import styles from './AiSidebar.module.css';
 
 type Props = {
@@ -31,6 +32,12 @@ type Props = {
    * and then invokes this callback — no wrapper component needed.
    */
   onReset?: () => void;
+  /**
+   * Custom part renderer — called before the built-in renderers for every
+   * message part. Return a ReactNode to render it, or null/undefined to fall
+   * through to the built-ins. Enables custom part types like invoice cards.
+   */
+  renderPart?: RenderPartFn;
 };
 
 export function AiSidebar({
@@ -42,6 +49,7 @@ export function AiSidebar({
   className,
   style,
   onReset,
+  renderPart,
 }: Props) {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -91,6 +99,7 @@ export function AiSidebar({
           assistantIcon={icon}
           actions={actions}
           sendIcon={sendIcon}
+          renderPart={renderPart}
         />
       )}
     </aside>

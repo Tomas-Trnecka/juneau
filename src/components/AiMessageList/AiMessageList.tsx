@@ -4,6 +4,7 @@ import type { AiMessage } from '../../core/types';
 import { useLabels } from '../../i18n/context';
 import { AiMessageBubble } from '../AiMessageBubble/AiMessageBubble';
 import { AiTypingIndicator } from '../AiTypingIndicator/AiTypingIndicator';
+import type { RenderPartFn } from '../parts/AiMessagePartRenderer';
 import styles from './AiMessageList.module.css';
 
 type Props = {
@@ -15,9 +16,11 @@ type Props = {
   onProposalCancel: (proposalId: string) => void;
   /** Override the assistant avatar icon. Forwarded to every AiMessageBubble. */
   assistantIcon?: ReactNode;
+  /** Custom part renderer — forwarded to every AiMessageBubble. */
+  renderPart?: RenderPartFn;
 };
 
-export function AiMessageList({ messages, isLoading, isConnecting, onProposalConfirm, onProposalCancel, assistantIcon }: Props) {
+export function AiMessageList({ messages, isLoading, isConnecting, onProposalConfirm, onProposalCancel, assistantIcon, renderPart }: Props) {
   const labels = useLabels();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +45,7 @@ export function AiMessageList({ messages, isLoading, isConnecting, onProposalCon
           onProposalConfirm={onProposalConfirm}
           onProposalCancel={onProposalCancel}
           assistantIcon={assistantIcon}
+          renderPart={renderPart}
         />
       ))}
       {isLoading && (

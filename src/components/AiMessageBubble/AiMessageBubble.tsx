@@ -3,6 +3,7 @@ import { IconWandMagicSparkles } from '../icons';
 import type { AiMessage } from '../../core/types';
 import { useLabels } from '../../i18n/context';
 import { AiMessagePartRenderer } from '../parts/AiMessagePartRenderer';
+import type { RenderPartFn } from '../parts/AiMessagePartRenderer';
 import styles from './AiMessageBubble.module.css';
 
 type Props = {
@@ -11,9 +12,11 @@ type Props = {
   onProposalCancel: (proposalId: string) => void;
   /** Override the assistant avatar icon. Pass any ReactNode — an SVG, img, or component. Defaults to a brain icon. */
   assistantIcon?: ReactNode;
+  /** Custom part renderer — forwarded to every AiMessagePartRenderer. */
+  renderPart?: RenderPartFn;
 };
 
-export function AiMessageBubble({ message, onProposalConfirm, onProposalCancel, assistantIcon }: Props) {
+export function AiMessageBubble({ message, onProposalConfirm, onProposalCancel, assistantIcon, renderPart }: Props) {
   const labels = useLabels();
   const isUser = message.role === 'user';
 
@@ -31,6 +34,7 @@ export function AiMessageBubble({ message, onProposalConfirm, onProposalCancel, 
             part={part}
             onProposalConfirm={onProposalConfirm}
             onProposalCancel={onProposalCancel}
+            renderPart={renderPart}
           />
         ))}
         {message.parts.length === 0 && (

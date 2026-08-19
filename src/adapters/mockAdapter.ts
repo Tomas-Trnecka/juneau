@@ -1,4 +1,4 @@
-import { delay } from '../core/stream';
+import { delay, getMessageText } from '../core/stream';
 import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from '../core/types';
 
 /**
@@ -9,8 +9,7 @@ import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from '../core/ty
 export const mockAdapter: AiBackendAdapter = {
   async *sendMessage(input: AiAdapterInput): AsyncIterable<AiStreamEvent> {
     const lastUserMessage = [...input.messages].reverse().find(m => m.role === 'user');
-    const text = lastUserMessage?.parts.find(p => p.type === 'text');
-    const query = text?.type === 'text' ? text.text.toLowerCase() : '';
+    const query = lastUserMessage ? getMessageText(lastUserMessage).toLowerCase() : '';
 
     if (query.includes('activity') || query.includes('progress') || query.includes('document') || query.includes('dokument')) {
       yield* scenarioActivity();

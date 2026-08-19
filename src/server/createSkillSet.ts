@@ -1,9 +1,9 @@
 import type { ZodType } from 'zod';
-import type { SkillDefinition, SkillSet, SkillSetOptions } from './types';
+import type { SkillDefinition, SkillExecuteContext, SkillSet, SkillSetOptions } from './types';
 
 type SkillMap = Record<string, SkillDefinition<ZodType>>;
 
-function formatActivityEvent(event: Record<string, unknown>): string {
+function formatWireEvent(event: Record<string, unknown>): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
 
@@ -14,8 +14,12 @@ function pickLabel(labels: { cs: string; en: string }, language: string): string
 /**
  * Takes a map of skill definitions and returns a SkillSet containing:
  * - tools: ready-made tool definitions for ai-sdk's streamText({ tools })
- * - drainActivities(): flush buffered activity wire SSE strings
+ * - drainActivities(): flush buffered activity + part wire SSE strings
  * - hadFailure / failureContext: for driving tool failure recovery
+ *
+ * Each skill's execute fn receives a SkillExecuteContext as its second
+ * argument with an `emit(part)` callback — parts are pushed into the same
+ * buffer as activities and drained by streamToWire at the same points.
  */
 export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}): SkillSet {
   const language = options.language ?? 'en';
@@ -39,7 +43,7 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
 
         // Emit a "running" activity event into the buffer
         activityBuffer.push(
-          formatActivityEvent({
+          formatWireEvent({
             type: 'activity',
             id: name,
             title: pickLabel(skill.labels.running, language),
@@ -48,8 +52,17 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
           })
         );
 
+        const executeContext: SkillExecuteContext = {
+          emit: (part) => {
+            if (debug) {
+              console.debug(`[juneau] skill "${name}" → emitting part "${part.type}"`);
+            }
+            activityBuffer.push(formatWireEvent({ type: 'part', part }));
+          },
+        };
+
         try {
-          const result = await skill.execute(input as never);
+          const result = await skill.execute(input as never, executeContext);
 
           const durationMs = debug ? Date.now() - startMs : 0;
           if (debug) {
@@ -58,7 +71,7 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
 
           // Emit a "done" activity event
           activityBuffer.push(
-            formatActivityEvent({
+            formatWireEvent({
               type: 'activity',
               id: name,
               title: pickLabel(skill.labels.done, language),
@@ -80,7 +93,7 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
 
           // Emit a "failed" activity event
           activityBuffer.push(
-            formatActivityEvent({
+            formatWireEvent({
               type: 'activity',
               id: name,
               title: pickLabel(failedLabels, language),

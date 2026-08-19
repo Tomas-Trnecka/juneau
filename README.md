@@ -226,6 +226,18 @@ Converts `AiMessage[]` to `CoreMessage[]` for ai-sdk. Extracts text from parts, 
 
 Wraps skill definitions into ai-sdk `tools` with a built-in activity buffer. Each tool call automatically emits `running` / `done` / `failed` Juneau wire SSE strings — no manual activity handling needed.
 
+`execute` receives a `SkillExecuteContext` as its second argument with an `emit(part)` callback — push custom part wire events into the stream alongside the activities, e.g. an invoice card widget the frontend renders via `renderPart`:
+
+```ts
+execute: async ({ query }, { emit }) => {
+  const inv = await db.findInvoice(query);
+  emit({ type: 'invoice-card', invoiceNumber: inv.number, amount: inv.total });
+  return { found: 1, invoice: inv }; // returned to the model as the tool result
+},
+```
+
+Emitted parts share the activity buffer and are drained by `streamToWire` at the same points — they appear in the stream in emit order, before the model's text response.
+
 `SkillSet` members: `tools`, `drainActivities()`, `hadFailure`, `failureContext`.
 
 `SkillSetOptions`: `language?` — selects label variant (`'en'` default). `debug?` — emit `console.debug` logs per skill execution (default: `false`).
@@ -453,6 +465,39 @@ function MyPage() {
 | `actions` | `AiInputAction[]` | Toolbar buttons. |
 | `sendIcon` | `ReactNode` | Override send button icon. |
 | `placeholder` | `string` | Input placeholder text. |
+| `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
+
+---
+
+## Custom part rendering — `renderPart`
+
+Both `AiSidebar` and `AiChat` accept a `renderPart` prop — an escape hatch for rendering consumer-defined part types (or overriding built-in ones):
+
+```ts
+type RenderPartFn = (part: AiMessagePart) => ReactNode | null | undefined;
+```
+
+It is called **before** the built-in renderers for every message part. Return a ReactNode to render it; return `null`/`undefined` to fall through to the built-ins (`text`, `table`, `proposal`, `activity`, `error`).
+
+The backend can stream any custom part through the standard wire protocol:
+
+```json
+{ "type": "part", "part": { "type": "invoice-card", "invoiceNumber": "23251", "amount": "1200.00" } }
+```
+
+`AiCustomPart` (`{ type: string; [key: string]: unknown }`) is part of the `AiMessagePart` union, so TypeScript accepts custom shapes on both ends. Juneau applies **no validation or narrowing** to custom parts — the consumer owns all type assertions:
+
+```tsx
+// Define your part type wherever you like — Juneau doesn't need to know about it
+type InvoiceCardPart = { type: 'invoice-card'; invoiceNumber: string; amount: string };
+
+<AiSidebar renderPart={part => {
+  if (part.type === 'invoice-card') return <InvoiceCard part={part as InvoiceCardPart} />;
+  return null; // everything else falls through to the built-ins
+}} />
+```
+
+Unhandled custom part types show a dashed warning outline in development (so they're never a silent mystery) and render nothing in production.
 
 ---
 

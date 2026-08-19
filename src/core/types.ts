@@ -47,7 +47,21 @@ export type AiActivityPart = {
   metadata?: Record<string, unknown>;
 };
 
-export type AiMessagePart = AiTextPart | AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart;
+/**
+ * Escape hatch for consumer-defined part types. Any part shape with a `type`
+ * string that isn't one of the built-ins flows through the wire protocol and
+ * message state untouched. Juneau applies no validation or narrowing — the
+ * consumer owns all type assertions in their `renderPart` implementation.
+ */
+export type AiCustomPart = { type: string; [key: string]: unknown };
+
+export type AiMessagePart =
+  | AiTextPart
+  | AiTablePart
+  | AiProposalPart
+  | AiActivityPart
+  | AiErrorPart
+  | AiCustomPart;
 
 export type AiMessage = {
   id: string;
@@ -57,7 +71,7 @@ export type AiMessage = {
 };
 
 export type AiStreamTextEvent = { type: 'text'; text: string };
-export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart };
+export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart | AiCustomPart };
 export type AiStreamDoneEvent = { type: 'done' };
 export type AiStreamErrorEvent = { type: 'error'; message: string };
 
@@ -112,10 +126,10 @@ export type JuneauWireActivity = {
   metadata?: Record<string, unknown>;
 };
 
-/** Structured rich block — table or proposal */
+/** Structured rich block — table, proposal, or any consumer-defined custom part */
 export type JuneauWirePart = {
   type: 'part';
-  part: AiTablePart | AiProposalPart;
+  part: AiTablePart | AiProposalPart | AiCustomPart;
 };
 
 /** Stream finished cleanly */

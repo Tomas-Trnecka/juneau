@@ -4,6 +4,7 @@ import type { AiInputAction } from '../AiInput/AiInput';
 import { AiMessageList } from '../AiMessageList/AiMessageList';
 import { AiInput } from '../AiInput/AiInput';
 import { AiError } from '../AiError/AiError';
+import type { RenderPartFn } from '../parts/AiMessagePartRenderer';
 import styles from './AiChat.module.css';
 
 type Props = {
@@ -29,6 +30,12 @@ type Props = {
   actions?: AiInputAction[];
   /** Override the send button icon. Defaults to a paper-plane icon. */
   sendIcon?: ReactNode;
+  /**
+   * Custom part renderer — called before the built-in renderers for every
+   * message part. Return a ReactNode to render it, or null/undefined to fall
+   * through to the built-ins. Enables custom part types like invoice cards.
+   */
+  renderPart?: RenderPartFn;
   className?: string;
   style?: CSSProperties;
 };
@@ -56,6 +63,7 @@ export function AiChat({
   assistantIcon,
   actions,
   sendIcon,
+  renderPart,
   className,
   style,
 }: Props) {
@@ -71,6 +79,7 @@ export function AiChat({
         onProposalConfirm={onProposalConfirm}
         onProposalCancel={onProposalCancel}
         assistantIcon={assistantIcon}
+        renderPart={renderPart}
       />
 
       {error && <AiError message={error} />}

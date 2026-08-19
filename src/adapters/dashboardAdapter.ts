@@ -1,4 +1,4 @@
-import { delay } from '../core/stream';
+import { delay, getMessageText } from '../core/stream';
 import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from '../core/types';
 
 /**
@@ -11,8 +11,7 @@ import type { AiBackendAdapter, AiAdapterInput, AiStreamEvent } from '../core/ty
 export const dashboardAdapter: AiBackendAdapter = {
   async *sendMessage(input: AiAdapterInput): AsyncIterable<AiStreamEvent> {
     const lastMessage = [...input.messages].reverse().find(m => m.role === 'user');
-    const text = lastMessage?.parts.find(p => p.type === 'text');
-    const query = text?.type === 'text' ? text.text.toLowerCase() : '';
+    const query = lastMessage ? getMessageText(lastMessage).toLowerCase() : '';
 
     if (query === 'dashboard-init') {
       yield* scenarioGreeting();
