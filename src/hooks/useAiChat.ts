@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { consumeStream, serializeMessages } from '../core/stream';
+import { trimHistory, isProposalPart } from '../core/history';
 import type {
   AiMessage,
   AiMessagePart,
@@ -21,6 +22,25 @@ export type UseAiChatOptions = {
   onProposalConfirm?: (proposalId: string, payload: unknown) => void;
   /** Called when a proposal is cancelled */
   onProposalCancel?: (proposalId: string) => void;
+  /**
+   * Restored conversation to start with — typically the output of
+   * `deserializeMessages`. Read once on mount; switch chats later via
+   * `reset(nextMessages)`.
+   */
+  initialMessages?: AiMessage[];
+  /**
+   * Maximum number of messages sent to the adapter per request — a
+   * token-saving measure. Rendering is never trimmed; the cut keeps the most
+   * recent messages and never splits a user/assistant exchange. Unlimited by
+   * default.
+   */
+  historyLimit?: number;
+  /**
+   * Called whenever the conversation settles: an exchange finishes streaming,
+   * a proposal is resolved, or the chat is reset. Never called per streamed
+   * token. Use this to persist the conversation (see `serializeForStorage`).
+   */
+  onMessagesChange?: (messages: AiMessage[]) => void;
 };
 
 export type UseAiChatReturn = {
@@ -46,7 +66,11 @@ export type UseAiChatReturn = {
    */
   isConnecting: boolean;
   error: string | null;
-  reset: () => void;
+  /**
+   * Clears the conversation and aborts any in-flight stream. Pass
+   * `nextMessages` to load a different stored chat instead of starting empty.
+   */
+  reset: (nextMessages?: AiMessage[]) => void;
   confirmProposal: (proposalId: string, payload: unknown) => void;
   cancelProposal: (proposalId: string) => void;
 };
@@ -55,9 +79,12 @@ export function useAiChat({
   adapter,
   context,
   onProposalConfirm,
-  onProposalCancel
+  onProposalCancel,
+  initialMessages,
+  historyLimit,
+  onMessagesChange
 }: UseAiChatOptions): UseAiChatReturn {
-  const [messages, setMessages] = useState<AiMessage[]>([]);
+  const [messages, setMessages] = useState<AiMessage[]>(initialMessages ?? []);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -65,6 +92,20 @@ export function useAiChat({
 
   // Ref so consumeStream callback always sees latest messages without stale closure
   const abortRef = useRef<AbortController | null>(null);
+
+  // onMessagesChange fires only when the conversation settles (stream done,
+  // proposal resolved, reset) — never per token. The flag is raised at those
+  // points and consumed here once React has committed the final message state.
+  const shouldNotifyRef = useRef(false);
+  const onMessagesChangeRef = useRef(onMessagesChange);
+  useEffect(() => {
+    onMessagesChangeRef.current = onMessagesChange;
+  });
+  useEffect(() => {
+    if (!shouldNotifyRef.current || isLoading) return;
+    shouldNotifyRef.current = false;
+    onMessagesChangeRef.current?.(messages);
+  }, [messages, isLoading]);
 
   const appendPartToLast = useCallback((part: AiMessagePart) => {
     setMessages(prev => {
@@ -144,7 +185,11 @@ export function useAiChat({
     abortRef.current = abort;
 
     try {
-      const stream = adapter.sendMessage({ messages: serializeHistory([...currentMessages, userMessage]), context });
+      const history = trimHistory(
+        [...currentMessages, userMessage],
+        historyLimit ?? Number.POSITIVE_INFINITY
+      );
+      const stream = adapter.sendMessage({ messages: serializeHistory(history), context });
 
       await consumeStream(
         stream,
@@ -176,10 +221,11 @@ export function useAiChat({
       ensureAssistantBubble();
       appendPartToLast({ type: 'error', message });
     } finally {
+      shouldNotifyRef.current = true;
       setIsLoading(false);
       setIsConnecting(false);
     }
-  }, [adapter, context, appendTextToLast, appendPartToLast]);
+  }, [adapter, context, historyLimit, appendTextToLast, appendPartToLast]);
 
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
@@ -243,6 +289,7 @@ export function useAiChat({
       setError(message);
       appendPartToLast({ type: 'error', message });
     } finally {
+      shouldNotifyRef.current = true;
       setIsLoading(false);
       setIsConnecting(false);
     }
@@ -254,22 +301,39 @@ export function useAiChat({
     setIsConnecting(false);
   }, []);
 
-  const reset = useCallback(() => {
+  const reset = useCallback((nextMessages?: AiMessage[]) => {
     abortRef.current?.abort();
-    setMessages([]);
+    shouldNotifyRef.current = true;
+    setMessages(nextMessages ?? []);
     setInput('');
     setError(null);
     setIsLoading(false);
     setIsConnecting(false);
   }, []);
 
+  // Marking the proposal resolved in state disables its card, so the same
+  // proposal can never fire callbacks twice or survive persistence as actionable.
+  const resolveProposal = useCallback((proposalId: string, resolved: 'confirmed' | 'cancelled') => {
+    shouldNotifyRef.current = true;
+    setMessages(prev => prev.map(msg => ({
+      ...msg,
+      parts: msg.parts.map(part =>
+        isProposalPart(part) && part.proposal.id === proposalId
+          ? { ...part, proposal: { ...part.proposal, resolved } }
+          : part
+      ),
+    })));
+  }, []);
+
   const confirmProposal = useCallback((proposalId: string, payload: unknown) => {
+    resolveProposal(proposalId, 'confirmed');
     onProposalConfirm?.(proposalId, payload);
-  }, [onProposalConfirm]);
+  }, [onProposalConfirm, resolveProposal]);
 
   const cancelProposal = useCallback((proposalId: string) => {
+    resolveProposal(proposalId, 'cancelled');
     onProposalCancel?.(proposalId);
-  }, [onProposalCancel]);
+  }, [onProposalCancel, resolveProposal]);
 
   return {
     messages,

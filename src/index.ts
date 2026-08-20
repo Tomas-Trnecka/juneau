@@ -8,6 +8,9 @@ export type {
   AiTablePart as AiTablePartType,
   AiProposalPart,
   AiProposal,
+  AiProposalResolution,
+  AiChatSummary,
+  AiSerializedMessage,
   AiActivityPart as AiActivityPartType,
   AiActivityStatus,
   AiErrorPart,
@@ -28,6 +31,7 @@ export type {
 } from './core/types';
 
 export { consumeStream, delay, getMessageText, serializeMessages } from './core/stream';
+export { serializeForStorage, deserializeMessages, trimHistory, trimChats, isProposalPart } from './core/history';
 
 // ─── Adapters ─────────────────────────────────────────────────────────────────
 export { mockAdapter } from './adapters/mockAdapter';
@@ -61,6 +65,7 @@ export { AiInput } from './components/AiInput/AiInput';
 export type { AiInputAction } from './components/AiInput/AiInput';
 export { AiTypingIndicator } from './components/AiTypingIndicator/AiTypingIndicator';
 export { AiError } from './components/AiError/AiError';
+export { AiChatHistoryList } from './components/AiChatHistoryList/AiChatHistoryList';
 export { AiMessagePartRenderer } from './components/parts/AiMessagePartRenderer';
 export type { RenderPartFn } from './components/parts/AiMessagePartRenderer';
 export { AiTablePart } from './components/parts/AiTablePart';

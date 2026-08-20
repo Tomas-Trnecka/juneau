@@ -12,6 +12,14 @@ export type AiTablePart = {
   rows: Record<string, unknown>[];
 };
 
+/**
+ * Lifecycle state of a proposal.
+ * - `confirmed` / `cancelled` — the user acted on it
+ * - `expired` — the proposal was persisted to history without being acted on;
+ *   restored proposals must never fire callbacks against stale payloads
+ */
+export type AiProposalResolution = 'confirmed' | 'cancelled' | 'expired';
+
 export type AiProposal = {
   id: string;
   title: string;
@@ -20,6 +28,8 @@ export type AiProposal = {
   payload?: unknown;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Set once the proposal is acted on or expired — renders the card disabled */
+  resolved?: AiProposalResolution;
 };
 
 export type AiProposalPart = {
@@ -69,6 +79,27 @@ export type AiMessage = {
   parts: AiMessagePart[];
   createdAt: Date;
 };
+
+// ─── Chat history ─────────────────────────────────────────────────────────────
+//
+// Juneau is storage-agnostic: the consumer persists chats however they want
+// (localStorage, database, …) and hands Juneau plain data. These types define
+// the exact contract.
+
+/**
+ * Lightweight descriptor for one stored chat — what a chat history list needs
+ * to render. The consumer stores the full `AiMessage[]` per chat separately
+ * and loads it on selection.
+ */
+export type AiChatSummary = {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/** JSON-safe form of {@link AiMessage} — dates as ISO strings. */
+export type AiSerializedMessage = Omit<AiMessage, 'createdAt'> & { createdAt: string };
 
 export type AiStreamTextEvent = { type: 'text'; text: string };
 export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart | AiCustomPart };

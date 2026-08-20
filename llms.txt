@@ -27,8 +27,9 @@ Returns all useAiChat fields plus `setContext(ctx)`. Must be inside AiChatProvid
 Use `setContext()` on each page to pass current page, available tools, entity IDs, etc. to the adapter.
 
 ### useAiChat(options)
-Low-level hook for custom UIs. Options: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`
-Returns: `messages`, `input`, `setInput`, `sendMessage`, `sendMessageWithText`, `sendGreeting`, `stop`, `isLoading`, `isConnecting`, `error`, `reset`, `confirmProposal`, `cancelProposal`
+Low-level hook for custom UIs. Options: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`, `initialMessages?` (restored conversation), `historyLimit?` (max messages sent to adapter per request — token saving, rendering never trimmed), `onMessagesChange?` (fires when conversation settles — stream done, proposal resolved, reset; never per token — use to persist)
+Returns: `messages`, `input`, `setInput`, `sendMessage`, `sendMessageWithText`, `sendGreeting`, `stop`, `isLoading`, `isConnecting`, `error`, `reset(nextMessages?)` (pass messages to switch to another stored chat), `confirmProposal`, `cancelProposal`
+`confirmProposal`/`cancelProposal` also mark the proposal `resolved` in message state — the card renders disabled with a badge.
 
 ## Components
 
@@ -78,6 +79,11 @@ Renders a data table from columns + rows.
 
 ### AiProposalCard
 Renders a confirm/cancel card. Calls onProposalConfirm(id, payload) or onProposalCancel(id).
+If `proposal.resolved` is set (`'confirmed' | 'cancelled' | 'expired'`), buttons are replaced by a status badge and the card dims.
+
+### AiChatHistoryList
+Renders a list of stored chats. Props: `chats: AiChatSummary[]`, `onSelect(chatId)`, `activeChatId?`, `onDelete?(chatId)`.
+`AiChatSummary = { id, title, createdAt: Date, updatedAt: Date }`. Consumer owns storage and selection.
 
 ### AiTypingIndicator
 Shows animated dots while streaming or connecting.
@@ -131,6 +137,15 @@ type AiAdapterInput = {
 - `mockAdapter` — dev-only, keyword-triggered scenarios: table, proposal, activity, help, error.
 
 Both adapters accept `credentials?: RequestCredentials` for cross-origin cookie auth (`'include'`).
+
+## Chat history helpers
+
+Juneau is storage-agnostic — the consumer persists chats, Juneau defines the contract and renders restored conversations (all rich parts re-render from plain data, no reconstruction needed).
+
+- `serializeForStorage(messages)` → `AiSerializedMessage[]` — JSON-safe: dates → ISO strings, unresolved proposals marked `resolved: 'expired'` (restored cards render disabled, never fire stale callbacks), `running` activity parts dropped.
+- `deserializeMessages(stored)` → `AiMessage[]` — revives `createdAt` dates. Feed to `initialMessages` or `reset()`.
+- `trimHistory(messages, limit)` — keeps the most recent `limit` messages; never starts on an assistant turn (alternation stays valid). Used internally by `historyLimit`.
+- `trimChats(chats, limit)` — returns the `limit` most recently updated `AiChatSummary[]`, sorted newest first. Enforce overall chats limit by deleting the rest from storage.
 
 ## Juneau wire protocol
 

@@ -193,6 +193,9 @@ import { juneauCs } from 'juneau';
 | `proposalConfirm` | `AiProposalCard` fallback confirm label |
 | `proposalCancel` | `AiProposalCard` fallback cancel label |
 | `errorDismiss` | `AiError` dismiss button `aria-label` |
+| `proposalConfirmed` / `proposalCancelled` / `proposalExpired` | `AiProposalCard` resolved-state badges |
+| `historyEmpty` | `AiChatHistoryList` empty state |
+| `historyDeleteChat` | `AiChatHistoryList` delete button `aria-label` |
 | `actionAddFile` | `AiInput` quick action bar |
 | `actionQuickActions` | `AiInput` quick action bar |
 | `actionNew` | `AiInput` quick action bar |
@@ -215,9 +218,26 @@ The primary hook. Returns:
 | `sendGreeting(contextHint)` | Trigger the adapter and stream a response as an **assistant-only** message — no user bubble shown. Use for proactive greetings on page load. |
 | `isLoading` | `true` while streaming |
 | `error` | Last error string, or `null` |
-| `reset()` | Clear all messages, abort any in-flight stream |
-| `confirmProposal(id, payload)` | Calls `onProposalConfirm` callback |
-| `cancelProposal(id)` | Calls `onProposalCancel` callback |
+| `reset(nextMessages?)` | Clear all messages (or replace with a restored chat), abort any in-flight stream |
+| `confirmProposal(id, payload)` | Marks the proposal `resolved: 'confirmed'` in state, then calls `onProposalConfirm` |
+| `cancelProposal(id)` | Marks the proposal `resolved: 'cancelled'` in state, then calls `onProposalCancel` |
+
+Options: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`, `initialMessages?` (restored conversation), `historyLimit?` (max messages sent to the adapter per request — token saving; rendering is never trimmed and the cut never splits an exchange), `onMessagesChange?` (fires when the conversation settles — stream done, proposal resolved, reset; never per token — use to persist).
+
+## Chat history
+
+Juneau is storage-agnostic: the consumer persists chats, Juneau defines the contract and re-renders restored conversations (all rich parts render from plain data — no reconstruction).
+
+Helpers in `core/history.ts`:
+
+| Export | Description |
+|---|---|
+| `serializeForStorage(messages)` | JSON-safe form: dates → ISO strings, unresolved proposals → `resolved: 'expired'`, `running` activity parts dropped |
+| `deserializeMessages(stored)` | Revives dates; feed to `initialMessages` or `reset()` |
+| `trimHistory(messages, limit)` | Keeps the most recent `limit` messages; never starts on an assistant turn |
+| `trimChats(chats, limit)` | Returns the `limit` most recently updated `AiChatSummary[]`, newest first |
+
+`AiChatHistoryList` renders `AiChatSummary[]` (`{ id, title, createdAt, updatedAt }`) with select/delete; the consumer owns the chat list and per-chat storage. Multi-chat switching = `reset(loadMessagesFor(chatId))`.
 
 ---
 

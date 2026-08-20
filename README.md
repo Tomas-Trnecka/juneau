@@ -534,14 +534,17 @@ const {
   isLoading,           // boolean — true while streaming
   isConnecting,        // boolean — true from send until first token arrives
   error,               // string | null — last error, cleared on next send
-  reset,               // () => void — clear all messages and abort any stream
-  confirmProposal,     // (id: string, payload: unknown) => void
-  cancelProposal,      // (id: string) => void
+  reset,               // (nextMessages?: AiMessage[]) => void — clear (or replace) messages, abort any stream
+  confirmProposal,     // (id: string, payload: unknown) => void — marks proposal resolved + fires callback
+  cancelProposal,      // (id: string) => void — marks proposal resolved + fires callback
 } = useAiChat({
   adapter,             // required
   context,             // optional — forwarded to every adapter.sendMessage call
   onProposalConfirm,   // optional — called by confirmProposal
   onProposalCancel,    // optional — called by cancelProposal
+  initialMessages,     // optional — restored conversation to start with (see Chat history)
+  historyLimit,        // optional — max messages sent to the adapter per request (token saving)
+  onMessagesChange,    // optional — called when the conversation settles; use to persist
 });
 ```
 
@@ -722,6 +725,71 @@ yield {
 
 ---
 
+## Chat history
+
+Juneau is storage-agnostic: it defines the exact data contract and renders restored conversations (including tables, proposals, and custom parts), but never touches storage itself. You persist chats wherever you want — localStorage, a database — and hand Juneau plain data.
+
+**Persist a conversation:**
+
+```tsx
+import { useAiChat, serializeForStorage } from 'juneau';
+
+const chat = useAiChat({
+  adapter,
+  historyLimit: 20, // send at most 20 messages to the adapter per request (token saving)
+  onMessagesChange: (messages) => {
+    // called when the conversation settles — never per streamed token
+    localStorage.setItem('chat', JSON.stringify(serializeForStorage(messages)));
+  },
+});
+```
+
+`serializeForStorage` prepares messages for persistence:
+- `createdAt` dates become ISO strings
+- unresolved proposals are marked `resolved: 'expired'` — a restored proposal card renders disabled and can never fire callbacks against a stale payload
+- `running` activity parts are dropped (they'd look permanently stuck)
+
+**Restore a conversation:**
+
+```tsx
+import { deserializeMessages } from 'juneau';
+
+const stored = JSON.parse(localStorage.getItem('chat') ?? '[]');
+const chat = useAiChat({ adapter, initialMessages: deserializeMessages(stored) });
+```
+
+All rich parts re-render exactly as they streamed in — no reconstruction needed. The restored history is also sent to the adapter, so the AI keeps full context.
+
+**Rendering trims nothing.** `historyLimit` only caps what is *sent to the adapter*; the cut keeps the most recent messages and never splits a user/assistant exchange, so alternation stays valid.
+
+**Multiple chats:**
+
+Juneau supports a multi-chat UX via `AiChatSummary` and the `AiChatHistoryList` component. You own the chat list and per-chat storage; Juneau renders the list and switches conversations via `reset(nextMessages)`:
+
+```tsx
+import { AiChatHistoryList, trimChats } from 'juneau';
+
+<AiChatHistoryList
+  chats={trimChats(myChats, 10)}   // keep the 10 most recently updated
+  activeChatId={currentChatId}
+  onSelect={(chatId) => chat.reset(loadMessagesFor(chatId))}
+  onDelete={(chatId) => deleteChat(chatId)}  // optional — omit to hide delete buttons
+/>
+```
+
+```ts
+type AiChatSummary = {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+```
+
+`trimChats(chats, limit)` returns the `limit` most recently updated chats (sorted newest first) — delete the rest from your storage to enforce an overall chats limit.
+
+---
+
 ## Theming
 
 All visual values are CSS custom properties prefixed `--juneau-`. Override them via `JuneauProvider`:
@@ -793,7 +861,12 @@ Pass any `Partial<JuneauLabels>` — omitted keys fall back to English:
 | `emptyStateHint` | `Try: "Show me the data" or "Can you suggest something?"` | `AiMessageList` empty state hint |
 | `proposalConfirm` | `Confirm` | `AiProposalCard` fallback confirm label |
 | `proposalCancel` | `Cancel` | `AiProposalCard` fallback cancel label |
+| `proposalConfirmed` | `Confirmed` | `AiProposalCard` badge after confirm |
+| `proposalCancelled` | `Cancelled` | `AiProposalCard` badge after cancel |
+| `proposalExpired` | `No longer available` | `AiProposalCard` badge for restored proposals |
 | `errorDismiss` | `Dismiss` | `AiError` dismiss button |
+| `historyEmpty` | `No previous chats` | `AiChatHistoryList` empty state |
+| `historyDeleteChat` | `Delete chat` | `AiChatHistoryList` delete button |
 | `actionAddFile` | `Add file` | `AiInput` toolbar |
 | `actionQuickActions` | `Quick actions` | `AiInput` toolbar |
 | `actionNew` | `New` | `AiInput` toolbar |

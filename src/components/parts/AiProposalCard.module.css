@@ -33,6 +33,21 @@
   line-height: 1.5;
 }
 
+.cardResolved {
+  opacity: 0.65;
+}
+
+.resolvedBadge {
+  display: inline-block;
+  padding: 3px 10px;
+  background-color: var(--juneau-color-surface-raised);
+  color: var(--juneau-color-text-muted);
+  border: 1px solid var(--juneau-color-border);
+  border-radius: var(--juneau-radius-full);
+  font-size: var(--juneau-font-size-sm);
+  font-weight: 500;
+}
+
 .actions {
   display: flex;
   gap: 8px;

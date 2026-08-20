@@ -36,7 +36,15 @@ export type JuneauLabels = {
   // AiProposalCard — fallback labels when the proposal doesn't specify its own
   proposalConfirm: string;
   proposalCancel: string;
+  // AiProposalCard — badges shown once a proposal is resolved
+  proposalConfirmed: string;
+  proposalCancelled: string;
+  proposalExpired: string;
 
   // AiError
   errorDismiss: string;
+
+  // AiChatHistoryList
+  historyEmpty: string;
+  historyDeleteChat: string;
 };
