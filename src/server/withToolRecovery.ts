@@ -10,6 +10,26 @@ function wireDone(): string {
 }
 
 /**
+ * Extracts the text payload from a wire SSE chunk's `data: {json}` lines.
+ * Returns '' for non-text events or unparseable lines.
+ */
+function extractWireText(chunk: string): string {
+  let text = '';
+  for (const line of chunk.split('\n')) {
+    if (!line.startsWith('data: ')) continue;
+    try {
+      const event = JSON.parse(line.slice(6)) as { type?: string; text?: string };
+      if (event.type === 'text' && typeof event.text === 'string') {
+        text += event.text;
+      }
+    } catch {
+      // Not JSON — ignore, only well-formed text events count
+    }
+  }
+  return text;
+}
+
+/**
  * Encapsulates the multi-phase streaming pattern needed for Gemini 2.5 Flash
  * tool call scenarios where the model either fails or silently succeeds without
  * emitting any text in the same stream pass.
@@ -39,17 +59,21 @@ function wireDone(): string {
  * @returns AsyncIterable<string> of Juneau wire SSE strings (activities + text + done)
  */
 export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIterable<string> {
-  const { phase1, phase2, phase3, skillSet, debug = false } = options;
+  const { phase1, phase2, phase3, skillSet, onFinish, debug = false } = options;
 
   if (debug) {
     console.debug('[juneau] withToolRecovery → phase 1 start');
   }
 
   let producedText = false;
+  // Assistant text accumulated across all phases — handed to onFinish on completion
+  let accumulatedText = '';
 
   const result1 = phase1();
 
   for await (const chunk of streamToWire(result1.fullStream, skillSet, { debug })) {
+    accumulatedText += extractWireText(chunk);
+
     // Track whether any text reached the wire (done event doesn't count)
     if (chunk.includes('"type":"text"')) {
       producedText = true;
@@ -78,12 +102,21 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
     try {
       const result2 = phase2(skillSet.failureContext);
 
-      // Phase 2 has no skillSet — plain text response, no tool calls expected
-      yield* streamToWire(result2.fullStream, undefined, { debug });
+      // Phase 2 has no skillSet — plain text response, no tool calls expected.
+      // Chunks are re-yielded one by one so we can accumulate their text; the
+      // final done event is held back until onFinish has fired.
+      for await (const chunk of streamToWire(result2.fullStream, undefined, { debug })) {
+        accumulatedText += extractWireText(chunk);
+        if (chunk.includes('"type":"done"')) continue;
+        yield chunk;
+      }
 
       if (debug) {
         console.debug('[juneau] withToolRecovery → phase 2 complete');
       }
+
+      onFinish?.({ text: accumulatedText });
+      yield wireDone();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (debug) {
@@ -115,11 +148,20 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
       }
 
       try {
-        yield* streamToWire(phase3(fullMessages).fullStream, undefined, { debug });
+        // Re-yield chunk by chunk to accumulate text; done is held back until
+        // onFinish has fired.
+        for await (const chunk of streamToWire(phase3(fullMessages).fullStream, undefined, { debug })) {
+          accumulatedText += extractWireText(chunk);
+          if (chunk.includes('"type":"done"')) continue;
+          yield chunk;
+        }
 
         if (debug) {
           console.debug('[juneau] withToolRecovery → phase 3 complete');
         }
+
+        onFinish?.({ text: accumulatedText });
+        yield wireDone();
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (debug) {
@@ -141,6 +183,7 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
     );
   }
 
+  onFinish?.({ text: accumulatedText });
   yield wireDone();
 }
 

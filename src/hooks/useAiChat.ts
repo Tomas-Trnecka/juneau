@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { consumeStream, serializeMessages } from '../core/stream';
 import { trimHistory, isProposalPart } from '../core/history';
 import type {
@@ -335,7 +335,9 @@ export function useAiChat({
     onProposalCancel?.(proposalId);
   }, [onProposalCancel, resolveProposal]);
 
-  return {
+  // Stable reference — callbacks are useCallback-stable, so this only changes
+  // when actual state changes. Lets AiChatProvider memoize its context value.
+  return useMemo(() => ({
     messages,
     input,
     setInput,
@@ -349,5 +351,18 @@ export function useAiChat({
     reset,
     confirmProposal,
     cancelProposal
-  };
+  }), [
+    messages,
+    input,
+    sendMessage,
+    sendMessageWithText,
+    sendGreeting,
+    stop,
+    isLoading,
+    isConnecting,
+    error,
+    reset,
+    confirmProposal,
+    cancelProposal
+  ]);
 }

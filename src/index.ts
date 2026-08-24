@@ -48,7 +48,7 @@ export type { UseAiChatOptions, UseAiChatReturn } from './hooks/useAiChat';
 export { JuneauProvider } from './components/JuneauProvider/JuneauProvider';
 export type { JuneauTheme } from './components/JuneauProvider/JuneauProvider';
 export { AiChatProvider } from './context/AiChatProvider';
-export { AiChatContext, useAiChatContext } from './context/AiChatContext';
+export { AiChatContext, useAiChatContext, useAiChatContextSafe } from './context/AiChatContext';
 export type { AiChatContextValue } from './context/AiChatContext';
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────

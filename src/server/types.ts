@@ -123,6 +123,12 @@ export interface ToolRecoveryOptions {
    */
   phase3?: (messages: unknown[]) => { fullStream: AsyncIterable<unknown> };
   skillSet: SkillSet;
+  /**
+   * Called once, right before the final done event, with the assistant text
+   * accumulated across all phases. Use to persist the response server-side.
+   * Not called on error paths.
+   */
+  onFinish?: (result: { text: string }) => void;
   /** Emit structured console.debug logs for phase decisions and chunk flow. Default: false */
   debug?: boolean;
 }

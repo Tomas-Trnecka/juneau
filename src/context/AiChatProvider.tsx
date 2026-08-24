@@ -1,4 +1,4 @@
-import { useState, useCallback, type ReactNode } from 'react';
+import { useState, useCallback, useMemo, type ReactNode } from 'react';
 import { useAiChat } from '../hooks/useAiChat';
 import type { AiMessage, AiBackendAdapter } from '../core/types';
 import { AiChatContext } from './AiChatContext';
@@ -54,8 +54,14 @@ export function AiChatProvider({
     onMessagesChange,
   });
 
+  // Memoized so consumers only re-render when chat state actually changes
+  const value = useMemo(
+    () => ({ ...chat, setContext }),
+    [chat, setContext]
+  );
+
   return (
-    <AiChatContext.Provider value={{ ...chat, setContext }}>
+    <AiChatContext.Provider value={value}>
       {children}
     </AiChatContext.Provider>
   );

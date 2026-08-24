@@ -26,9 +26,13 @@ export function isProposalPart(part: AiMessagePart): part is AiProposalPart {
  * @example
  * localStorage.setItem('chat', JSON.stringify(serializeForStorage(messages)));
  */
+/** Current persistence format version written by {@link serializeForStorage}. */
+const STORAGE_FORMAT_VERSION = 1;
+
 export function serializeForStorage(messages: AiMessage[]): AiSerializedMessage[] {
   return messages.map(msg => ({
     ...msg,
+    v: STORAGE_FORMAT_VERSION,
     createdAt: msg.createdAt.toISOString(),
     parts: msg.parts
       .filter(part => !(part.type === 'activity' && part.status === 'running'))
@@ -53,7 +57,8 @@ function sanitizePart(part: AiMessagePart): AiMessagePart {
  * const messages = deserializeMessages(stored);
  */
 export function deserializeMessages(stored: AiSerializedMessage[]): AiMessage[] {
-  return stored.map(msg => ({
+  // Missing `v` means v1 (pre-versioned histories) — same shape, parses as-is
+  return stored.map(({ v: _v, ...msg }) => ({
     ...msg,
     createdAt: new Date(msg.createdAt),
   }));

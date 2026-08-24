@@ -98,8 +98,11 @@ export type AiChatSummary = {
   updatedAt: Date;
 };
 
-/** JSON-safe form of {@link AiMessage} — dates as ISO strings. */
-export type AiSerializedMessage = Omit<AiMessage, 'createdAt'> & { createdAt: string };
+/**
+ * JSON-safe form of {@link AiMessage} — dates as ISO strings.
+ * `v` is the persistence format version; missing means v1 (pre-versioned).
+ */
+export type AiSerializedMessage = Omit<AiMessage, 'createdAt'> & { createdAt: string; v?: number };
 
 export type AiStreamTextEvent = { type: 'text'; text: string };
 export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart | AiCustomPart };

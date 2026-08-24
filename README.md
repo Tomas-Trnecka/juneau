@@ -267,14 +267,21 @@ Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all ai-sdk v7 t
 
 Multi-phase pattern for Gemini-style tool calls. Phase 1 streams with tools. Phase 2 triggers only when a tool failed **and** no text was produced — it calls the model without tools and injects the failure context to force a text response. Phase 3 (optional) handles the silent-success case — Gemini 2.5 Flash often treats a successful tool call as its complete response and never writes text. When the tool succeeded but no text was produced, `phase3` receives the full phase 1 message history (resolved from the ai-sdk result's `messages` promise — includes tool-call and tool-result turns, which Gemini requires to accept the history) so a second model call without tools can summarise the result. Errors thrown by phase 2/3 are emitted as wire `error` events instead of a silent `done`. Pass `debug: true` to log phase decisions, the resolved phase 3 history, and the `textProduced` / `hadFailure` state at each decision point.
 
+Pass `onFinish` to receive the assistant text accumulated across all phases — called exactly once, right before the final `done` event (never on error paths). Use it to persist the response server-side.
+
 ```ts
 yield* withToolRecovery({
   phase1: () => streamText({ model, system, messages, tools: skillSet.tools, maxSteps: 2 }),
   phase2: (ctx) => streamText({ model, system, messages: [...messages, { role: 'assistant', content: ctx }] }),
   phase3: (fullMessages) => streamText({ model, system, messages: fullMessages }), // no tools — forced text
   skillSet,
+  onFinish: ({ text }) => saveAssistantReply(text),
 });
 ```
+
+#### Type re-exports
+
+The wire/message types shared with the client — `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiTextPart`, `AiSerializedMessage`, `AiStreamEvent`, `JuneauWireEvent` (and its member types) — are also re-exported from `juneau/server`, so backend code never needs to import from the client entry.
 
 ---
 
@@ -418,18 +425,19 @@ setContext(prev => ({ ...prev, page: 'invoices' }));
 
 **Consuming chat state outside a guaranteed provider:**
 
-`useAiChatContext()` throws when called outside `<AiChatProvider>` — fail fast is right for components that require it. For components that may render outside the provider (e.g. during sign-out transitions), use the exported `AiChatContext` with plain `useContext` and handle `null`:
+`useAiChatContext()` throws when called outside `<AiChatProvider>` — fail fast is right for components that require it. For components that may render outside the provider (e.g. during sign-out transitions), use `useAiChatContextSafe()`, which returns `null` instead of throwing:
 
 ```tsx
-import { useContext } from 'react';
-import { AiChatContext } from 'juneau';
+import { useAiChatContextSafe } from 'juneau';
 
 function OptionalChatButton() {
-  const chat = useContext(AiChatContext); // AiChatContextValue | null
+  const chat = useAiChatContextSafe(); // AiChatContextValue | null
   if (!chat) return null;
   return <button onClick={() => chat.sendMessageWithText('Help')}>Ask AI</button>;
 }
 ```
+
+The context value is memoized — consumers re-render only when chat state actually changes, not on every provider render.
 
 ---
 
@@ -772,6 +780,7 @@ const chat = useAiChat({
 - `createdAt` dates become ISO strings
 - unresolved proposals are marked `resolved: 'expired'` — a restored proposal card renders disabled and can never fire callbacks against a stale payload
 - `running` activity parts are dropped (they'd look permanently stuck)
+- each message is stamped with the format version (`v: 1`); `deserializeMessages` treats a missing `v` as v1, so pre-versioned histories still parse
 
 **Restore a conversation:**
 

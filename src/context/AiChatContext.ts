@@ -37,3 +37,11 @@ export function useAiChatContext(): AiChatContextValue {
   }
   return ctx;
 }
+
+/**
+ * Like {@link useAiChatContext}, but returns null outside a provider instead
+ * of throwing. Use in components that render both inside and outside the chat.
+ */
+export function useAiChatContextSafe(): AiChatContextValue | null {
+  return useContext(AiChatContext);
+}
