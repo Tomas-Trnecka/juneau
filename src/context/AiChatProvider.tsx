@@ -1,7 +1,6 @@
 import { useState, useCallback, type ReactNode } from 'react';
 import { useAiChat } from '../hooks/useAiChat';
-import type { AiBackendAdapter } from '../core/types';
-import type { AiInputAction } from '../components/AiInput/AiInput';
+import type { AiMessage, AiBackendAdapter } from '../core/types';
 import { AiChatContext } from './AiChatContext';
 
 type Props = {
@@ -10,6 +9,12 @@ type Props = {
   context?: Record<string, unknown>;
   onProposalConfirm?: (proposalId: string, payload: unknown) => void;
   onProposalCancel?: (proposalId: string) => void;
+  /** Restored conversation to start with — typically the output of `deserializeMessages`. */
+  initialMessages?: AiMessage[];
+  /** Max messages sent to the adapter per request. Rendering is never trimmed. */
+  historyLimit?: number;
+  /** Called when the conversation settles. Use to persist via `serializeForStorage`. */
+  onMessagesChange?: (messages: AiMessage[]) => void;
   children: ReactNode;
 };
 
@@ -18,12 +23,25 @@ export function AiChatProvider({
   context: initialContext,
   onProposalConfirm,
   onProposalCancel,
+  initialMessages,
+  historyLimit,
+  onMessagesChange,
   children,
 }: Props) {
   const [context, setContextState] = useState<Record<string, unknown> | undefined>(initialContext);
 
-  const setContext = useCallback((ctx: Record<string, unknown>) => {
-    setContextState(ctx);
+  // Object form replaces the whole context; updater form enables merging
+  // without stale closures: setContext(prev => ({ ...prev, pageId: 'x' })).
+  const setContext = useCallback((
+    ctx:
+      | Record<string, unknown>
+      | ((prev: Record<string, unknown> | undefined) => Record<string, unknown>)
+  ) => {
+    if (typeof ctx === 'function') {
+      setContextState(prev => ctx(prev));
+    } else {
+      setContextState(ctx);
+    }
   }, []);
 
   const chat = useAiChat({
@@ -31,6 +49,9 @@ export function AiChatProvider({
     context,
     onProposalConfirm,
     onProposalCancel,
+    initialMessages,
+    historyLimit,
+    onMessagesChange,
   });
 
   return (

@@ -224,6 +224,12 @@ The primary hook. Returns:
 
 Options: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`, `initialMessages?` (restored conversation), `historyLimit?` (max messages sent to the adapter per request — token saving; rendering is never trimmed and the cut never splits an exchange), `onMessagesChange?` (fires when the conversation settles — stream done, proposal resolved, reset; never per token — use to persist).
 
+## AiChatProvider / AiChatContext
+
+`AiChatProvider` wraps `useAiChat` in React context for a single persistent conversation across pages. It accepts all `useAiChat` options (including `initialMessages`, `historyLimit`, `onMessagesChange`) and forwards them — keep the two option lists in sync when adding hook options.
+
+`setContext(obj)` **replaces** the whole context; the updater form `setContext(prev => ({ ...prev, key }))` merges. `useAiChatContext()` throws outside a provider (intentional); `AiChatContext` itself is exported from the barrel so consumers can `useContext(AiChatContext)` and handle `null` as a safe escape hatch.
+
 ## Chat history
 
 Juneau is storage-agnostic: the consumer persists chats, Juneau defines the contract and re-renders restored conversations (all rich parts render from plain data — no reconstruction).

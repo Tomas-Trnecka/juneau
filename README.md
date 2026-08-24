@@ -384,6 +384,9 @@ import { AiChatProvider } from 'juneau';
 | `context` | `Record<string, unknown>` | Initial context forwarded to every adapter call. Update per-page via `setContext()`. |
 | `onProposalConfirm` | `(id, payload) => void` | Called when user confirms a proposal card. |
 | `onProposalCancel` | `(id) => void` | Called when user cancels a proposal card. |
+| `initialMessages` | `AiMessage[]` | Restored conversation to start with (see Chat history). |
+| `historyLimit` | `number` | Max messages sent to the adapter per request. Rendering never trimmed. |
+| `onMessagesChange` | `(messages) => void` | Called when the conversation settles. Use to persist. |
 
 **Updating context per page:**
 
@@ -404,6 +407,27 @@ function InvoicesPage() {
   }, []);
 
   return <main>...</main>;
+}
+```
+
+**Replace vs merge:** passing an object to `setContext` **replaces** the whole context. To keep existing keys (e.g. a `sessionId` set elsewhere) while updating others, use the updater form:
+
+```tsx
+setContext(prev => ({ ...prev, page: 'invoices' }));
+```
+
+**Consuming chat state outside a guaranteed provider:**
+
+`useAiChatContext()` throws when called outside `<AiChatProvider>` — fail fast is right for components that require it. For components that may render outside the provider (e.g. during sign-out transitions), use the exported `AiChatContext` with plain `useContext` and handle `null`:
+
+```tsx
+import { useContext } from 'react';
+import { AiChatContext } from 'juneau';
+
+function OptionalChatButton() {
+  const chat = useContext(AiChatContext); // AiChatContextValue | null
+  if (!chat) return null;
+  return <button onClick={() => chat.sendMessageWithText('Help')}>Ask AI</button>;
 }
 ```
 

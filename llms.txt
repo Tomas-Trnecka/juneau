@@ -19,12 +19,15 @@ Provides CSS token overrides and UI string overrides to all Juneau components in
 ### AiChatProvider
 Props: `adapter: AiBackendAdapter`, `context?: Record<string, unknown>`, `onProposalConfirm?`, `onProposalCancel?`, `children`
 Holds shared useAiChat state. Wrap once at app/layout root. One provider = one persistent conversation.
+Props: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`, `initialMessages?`, `historyLimit?`, `onMessagesChange?` — the three history props are forwarded to the internal useAiChat.
 
 ## Hooks
 
 ### useAiChatContext()
-Returns all useAiChat fields plus `setContext(ctx)`. Must be inside AiChatProvider.
+Returns all useAiChat fields plus `setContext(ctx)`. Must be inside AiChatProvider — throws outside one.
 Use `setContext()` on each page to pass current page, available tools, entity IDs, etc. to the adapter.
+`setContext(obj)` REPLACES the whole context; `setContext(prev => ({ ...prev, key: v }))` merges (updater form).
+Safe escape hatch outside a guaranteed provider: `useContext(AiChatContext)` returns `AiChatContextValue | null` — `AiChatContext` is exported from the main barrel.
 
 ### useAiChat(options)
 Low-level hook for custom UIs. Options: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`, `initialMessages?` (restored conversation), `historyLimit?` (max messages sent to adapter per request — token saving, rendering never trimmed), `onMessagesChange?` (fires when conversation settles — stream done, proposal resolved, reset; never per token — use to persist)

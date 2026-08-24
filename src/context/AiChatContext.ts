@@ -6,8 +6,19 @@ export type AiChatContextValue = UseAiChatReturn & {
    * Update the context forwarded to every adapter.sendMessage call.
    * Call this on each page/view to tell the AI where the user is,
    * what tools are available, etc.
+   *
+   * Passing an object REPLACES the whole context. To merge with what's
+   * already there (e.g. keep a sessionId while updating the page), use the
+   * updater form:
+   *
+   * @example
+   * setContext(prev => ({ ...prev, pageId: 'invoices' }));
    */
-  setContext: (ctx: Record<string, unknown>) => void;
+  setContext: (
+    ctx:
+      | Record<string, unknown>
+      | ((prev: Record<string, unknown> | undefined) => Record<string, unknown>)
+  ) => void;
 };
 
 export const AiChatContext = createContext<AiChatContextValue | null>(null);
