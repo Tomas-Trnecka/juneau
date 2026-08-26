@@ -1,0 +1,94 @@
+.card {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 12px;
+  text-align: left;
+  background-color: var(--juneau-color-surface);
+  border: 1px solid var(--juneau-color-border);
+  border-radius: var(--juneau-radius-md);
+  font-family: var(--juneau-font-family);
+  font-size: var(--juneau-font-size-base);
+}
+
+.cardClickable {
+  cursor: pointer;
+  transition: background-color var(--juneau-transition-fast), border-color var(--juneau-transition-fast);
+}
+
+.cardClickable:hover {
+  background-color: var(--juneau-color-surface-hover);
+  border-color: var(--juneau-color-primary-border);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-weight: 600;
+  color: var(--juneau-color-text-primary);
+  font-size: var(--juneau-font-size-md);
+}
+
+.subtitle {
+  color: var(--juneau-color-text-secondary);
+  font-size: var(--juneau-font-size-sm);
+}
+
+.fields {
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.fieldLabel {
+  color: var(--juneau-color-text-muted);
+  font-size: var(--juneau-font-size-sm);
+  flex-shrink: 0;
+}
+
+.fieldValue {
+  margin: 0;
+  color: var(--juneau-color-text-primary);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: var(--juneau-radius-full);
+  font-size: var(--juneau-font-size-xs);
+  font-weight: 600;
+}
+
+.badgeSuccess {
+  background-color: var(--juneau-color-success-bg);
+  color: var(--juneau-color-success-text);
+}
+
+.badgeWarning {
+  background-color: var(--juneau-color-warning-bg);
+  color: var(--juneau-color-warning-text);
+}
+
+.badgeDanger {
+  background-color: var(--juneau-color-danger-bg);
+  color: var(--juneau-color-danger-text);
+}
+
+.badgeNeutral {
+  background-color: var(--juneau-color-surface-raised);
+  color: var(--juneau-color-text-secondary);
+}

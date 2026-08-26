@@ -54,7 +54,7 @@ src/
     AiTypingIndicator/
     AiError/
     JuneauProvider/
-    parts/        # Message part renderers: AiTablePart, AiProposalCard, AiMessagePartRenderer
+    parts/        # Message part renderers: AiTablePart, AiEntityCard, AiEntityListPart, AiProposalCard, AiMessagePartRenderer
   i18n/           # JuneauLabels type, context/hook, locales (en, cs)
   styles/         # tokens.css — single source of truth for all design tokens
   server/         # Node-only backend utilities — exported from juneau/server subpath

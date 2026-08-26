@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import type { AiMessage } from '../../core/types';
+import type { AiEntity, AiMessage } from '../../core/types';
 import type { AiInputAction } from '../AiInput/AiInput';
 import { AiMessageList } from '../AiMessageList/AiMessageList';
 import { AiInput } from '../AiInput/AiInput';
@@ -19,6 +19,8 @@ type Props = {
   onStop?: () => void;
   onProposalConfirm: (proposalId: string, payload: unknown) => void;
   onProposalCancel: (proposalId: string) => void;
+  /** Makes entity cards clickable — receives the entity and its optional entityType. */
+  onEntityClick?: (entity: AiEntity, entityType?: string) => void;
   placeholder?: string;
   /** Override the assistant avatar icon. Forwarded to every message bubble. */
   assistantIcon?: ReactNode;
@@ -59,6 +61,7 @@ export function AiChat({
   onStop,
   onProposalConfirm,
   onProposalCancel,
+  onEntityClick,
   placeholder,
   assistantIcon,
   actions,
@@ -78,6 +81,7 @@ export function AiChat({
         isConnecting={isConnecting}
         onProposalConfirm={onProposalConfirm}
         onProposalCancel={onProposalCancel}
+        onEntityClick={onEntityClick}
         assistantIcon={assistantIcon}
         renderPart={renderPart}
       />

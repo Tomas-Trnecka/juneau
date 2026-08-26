@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import type { AiMessage } from '../../core/types';
+import type { AiEntity, AiMessage } from '../../core/types';
 import { useLabels } from '../../i18n/context';
 import { AiMessageBubble } from '../AiMessageBubble/AiMessageBubble';
 import { AiTypingIndicator } from '../AiTypingIndicator/AiTypingIndicator';
@@ -16,11 +16,13 @@ type Props = {
   onProposalCancel: (proposalId: string) => void;
   /** Override the assistant avatar icon. Forwarded to every AiMessageBubble. */
   assistantIcon?: ReactNode;
+  /** Makes entity cards clickable — forwarded to every AiMessageBubble. */
+  onEntityClick?: (entity: AiEntity, entityType?: string) => void;
   /** Custom part renderer — forwarded to every AiMessageBubble. */
   renderPart?: RenderPartFn;
 };
 
-export function AiMessageList({ messages, isLoading, isConnecting, onProposalConfirm, onProposalCancel, assistantIcon, renderPart }: Props) {
+export function AiMessageList({ messages, isLoading, isConnecting, onProposalConfirm, onProposalCancel, onEntityClick, assistantIcon, renderPart }: Props) {
   const labels = useLabels();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +46,7 @@ export function AiMessageList({ messages, isLoading, isConnecting, onProposalCon
           message={message}
           onProposalConfirm={onProposalConfirm}
           onProposalCancel={onProposalCancel}
+          onEntityClick={onEntityClick}
           assistantIcon={assistantIcon}
           renderPart={renderPart}
         />

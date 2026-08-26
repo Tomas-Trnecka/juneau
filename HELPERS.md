@@ -89,6 +89,28 @@ execute: async ({ query }, { emit }) => {
 },
 ```
 
+**Emitting built-in entity parts from a skill:**
+
+Instead of a custom part, skills can emit the built-in `entity` / `entity-list` parts — rendered by Juneau's `AiEntityCard` / `AiEntityListPart` with zero frontend code:
+
+```ts
+execute: async ({ query }, { emit }) => {
+  const results = await db.search(query);
+  emit({
+    type: 'entity-list',
+    title: `${results.length} results`,
+    entityType: 'record',
+    entities: results.map(r => ({
+      id: r.id,
+      title: r.number,
+      subtitle: r.supplier,
+      fields: [{ label: 'Status', value: r.status, badge: r.status === 'approved' ? 'success' : 'warning' }],
+    })),
+  });
+  return { found: results.length };
+},
+```
+
 **`SkillSetOptions`:**
 ```ts
 interface SkillSetOptions {

@@ -42,6 +42,48 @@ export type AiErrorPart = {
   message: string;
 };
 
+/** Badge tone for an entity field value */
+export type AiEntityBadgeTone = 'success' | 'warning' | 'danger' | 'neutral';
+
+/** One labelled field of an entity — rendered as a label/value row */
+export type AiEntityField = {
+  label: string;
+  value: string;
+  /** Render the value as a coloured badge instead of plain text */
+  badge?: AiEntityBadgeTone;
+};
+
+/**
+ * A generic structured entity — a domain record (any object with a title
+ * and fields). Juneau renders it as a card; consumers can override via
+ * `renderPart` for domain-specific layouts.
+ */
+export type AiEntity = {
+  /** Stable ID — forwarded to `onEntityClick` so consumers can navigate */
+  id?: string;
+  title: string;
+  subtitle?: string;
+  fields?: AiEntityField[];
+  /** Arbitrary payload — not rendered, available for custom renderers and click handlers */
+  payload?: unknown;
+};
+
+export type AiEntityPart = {
+  type: 'entity';
+  entity: AiEntity;
+  /** Optional entity kind (e.g. "invoice") — available for custom renderers */
+  entityType?: string;
+};
+
+export type AiEntityListPart = {
+  type: 'entity-list';
+  entities: AiEntity[];
+  /** Optional heading above the list */
+  title?: string;
+  /** Optional entity kind shared by all items — available for custom renderers */
+  entityType?: string;
+};
+
 export type AiActivityStatus = 'running' | 'done' | 'failed';
 
 export type AiActivityPart = {
@@ -71,6 +113,8 @@ export type AiMessagePart =
   | AiProposalPart
   | AiActivityPart
   | AiErrorPart
+  | AiEntityPart
+  | AiEntityListPart
   | AiCustomPart;
 
 export type AiMessage = {
@@ -105,7 +149,7 @@ export type AiChatSummary = {
 export type AiSerializedMessage = Omit<AiMessage, 'createdAt'> & { createdAt: string; v?: number };
 
 export type AiStreamTextEvent = { type: 'text'; text: string };
-export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart | AiCustomPart };
+export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart | AiEntityPart | AiEntityListPart | AiCustomPart };
 export type AiStreamDoneEvent = { type: 'done' };
 export type AiStreamErrorEvent = { type: 'error'; message: string };
 
@@ -160,10 +204,10 @@ export type JuneauWireActivity = {
   metadata?: Record<string, unknown>;
 };
 
-/** Structured rich block — table, proposal, or any consumer-defined custom part */
+/** Structured rich block — table, proposal, entity, entity list, or any consumer-defined custom part */
 export type JuneauWirePart = {
   type: 'part';
-  part: AiTablePart | AiProposalPart | AiCustomPart;
+  part: AiTablePart | AiProposalPart | AiEntityPart | AiEntityListPart | AiCustomPart;
 };
 
 /** Stream finished cleanly */

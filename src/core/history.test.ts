@@ -52,6 +52,28 @@ describe('serializeForStorage', () => {
     expect(stored[0].parts[0]).toMatchObject({ type: 'activity', status: 'done' });
   });
 
+  it('round-trips entity and entity-list parts unchanged', () => {
+    const entityParts: AiMessage['parts'] = [
+      {
+        type: 'entity',
+        entityType: 'record',
+        entity: {
+          id: 'e1',
+          title: 'Record one',
+          fields: [{ label: 'Status', value: 'Approved', badge: 'success' }],
+        },
+      },
+      {
+        type: 'entity-list',
+        title: 'Results',
+        entities: [{ title: 'A' }, { title: 'B' }],
+      },
+    ];
+    const stored = serializeForStorage([msg('assistant', entityParts)]);
+    const restored = deserializeMessages(stored);
+    expect(restored[0].parts).toEqual(entityParts);
+  });
+
   it('does not mutate the input messages', () => {
     const original = msg('assistant', [
       { type: 'proposal', proposal: { id: 'p1', title: 'Do it' } },

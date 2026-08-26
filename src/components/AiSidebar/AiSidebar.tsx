@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
+import type { AiEntity } from '../../core/types';
 import { useAiChatContext } from '../../context/AiChatContext';
 import type { AiInputAction } from '../AiInput/AiInput';
 import { AiChat } from '../AiChat/AiChat';
@@ -38,6 +39,8 @@ type Props = {
    * through to the built-ins. Enables custom part types like invoice cards.
    */
   renderPart?: RenderPartFn;
+  /** Makes entity cards clickable — receives the entity and its optional entityType. */
+  onEntityClick?: (entity: AiEntity, entityType?: string) => void;
 };
 
 export function AiSidebar({
@@ -50,6 +53,7 @@ export function AiSidebar({
   style,
   onReset,
   renderPart,
+  onEntityClick,
 }: Props) {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -100,6 +104,7 @@ export function AiSidebar({
           actions={actions}
           sendIcon={sendIcon}
           renderPart={renderPart}
+          onEntityClick={onEntityClick}
         />
       )}
     </aside>

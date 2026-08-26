@@ -38,12 +38,12 @@ Returns: `messages`, `input`, `setInput`, `sendMessage`, `sendMessageWithText`, 
 
 ### AiSidebar
 Fixed-position overlay panel, bottom-right, reads from AiChatProvider.
-Props: `title?`, `icon?`, `actions?`, `sendIcon?`, `height?` (default: '60vh'), `onReset?`, `renderPart?`, `className?`, `style?`
+Props: `title?`, `icon?`, `actions?`, `sendIcon?`, `height?` (default: '60vh'), `onReset?`, `renderPart?`, `onEntityClick?`, `className?`, `style?`
 Has minimize/restore button. Minimized = compact header bar at bottom-right. Animated transition.
 
 ### AiChat
 Headless chat body (message list + input + error). Requires explicit props from useAiChat.
-Use when embedding chat in a custom layout instead of using AiSidebar. Also accepts `renderPart?`.
+Use when embedding chat in a custom layout instead of using AiSidebar. Also accepts `renderPart?` and `onEntityClick?`.
 
 ### renderPart — custom part renderer escape hatch
 `RenderPartFn = (part: AiMessagePart) => ReactNode | null | undefined`
@@ -65,13 +65,13 @@ Props: `title?`, `icon?`, `onMinimize?`, `isMinimized?`
 Props: `value`, `onChange`, `onSend`, `onStop?`, `isLoading`, `placeholder?`, `actions?`, `sendIcon?`
 
 ### AiMessageList
-Props: `messages`, `isLoading`, `isConnecting`, `onProposalConfirm`, `onProposalCancel`, `assistantIcon?`
+Props: `messages`, `isLoading`, `isConnecting`, `onProposalConfirm`, `onProposalCancel`, `onEntityClick?`, `assistantIcon?`
 
 ### AiMessageBubble
-Props: `message`, `onProposalConfirm`, `onProposalCancel`, `assistantIcon?`
+Props: `message`, `onProposalConfirm`, `onProposalCancel`, `onEntityClick?`, `assistantIcon?`
 
 ### AiMessagePartRenderer
-Dispatches AiMessagePart to the correct renderer. Part types: text, table, proposal, activity, error.
+Dispatches AiMessagePart to the correct renderer. Part types: text, table, entity, entity-list, proposal, activity, error.
 
 ### AiActivityPart
 Renders an activity item (running/done/failed). Subtle UI — not a main response, shows AI progress.
@@ -79,6 +79,12 @@ Running state has a pulsing pink dot. Done = green dot. Failed = red dot.
 
 ### AiTablePart
 Renders a data table from columns + rows.
+
+### AiEntityCard
+Renders a structured entity (`{ id?, title, subtitle?, fields?, payload? }`) as a card with labelled field rows. Fields can render as badges (`success | warning | danger | neutral`). Becomes a clickable `<button>` when `onEntityClick?(entity, entityType?)` is provided — use it to navigate to the record. `entity.payload` is opaque, never rendered.
+
+### AiEntityListPart
+Renders `entities: AiEntity[]` as stacked AiEntityCards with an optional `title` heading. Same `onEntityClick` behaviour.
 
 ### AiProposalCard
 Renders a confirm/cancel card. Calls onProposalConfirm(id, payload) or onProposalCancel(id).
@@ -110,10 +116,15 @@ AiStreamEvent =
 AiMessagePart =
   | { type: 'text'; text: string }
   | { type: 'table'; columns: string[]; rows: Record<string, unknown>[] }
+  | { type: 'entity'; entity: AiEntity; entityType?: string }
+  | { type: 'entity-list'; entities: AiEntity[]; title?: string; entityType?: string }
   | { type: 'proposal'; proposal: AiProposal }
   | { type: 'activity'; id?: string; title: string; description?: string; status: 'running' | 'done' | 'failed'; metadata?: Record<string, unknown> }
   | { type: 'error'; message: string }
   | AiCustomPart   // { type: string; [key: string]: unknown } — consumer-defined, rendered via renderPart
+
+AiEntity = { id?: string; title: string; subtitle?: string; fields?: AiEntityField[]; payload?: unknown }
+AiEntityField = { label: string; value: string; badge?: 'success' | 'warning' | 'danger' | 'neutral' }
 ```
 
 Custom parts (any `type` string not matching a built-in) flow through the wire protocol and message state untouched. Render them via the `renderPart` prop on `AiSidebar` / `AiChat`. Juneau applies no validation or narrowing — the consumer owns all type assertions. Unhandled custom parts show a dashed warning outline in dev, render nothing in production.
@@ -137,7 +148,7 @@ type AiAdapterInput = {
 
 - `createSseAdapter(url, options?)` — SSE streaming. Default parser understands Juneau wire protocol first, falls back to OpenAI format (`choices[0].delta.content`). Options: `method`, `headers`, `getHeaders`, `getBody`, `credentials`, `parseEvent`.
 - `createFetchStreamAdapter(url, options?)` — raw chunked HTTP / NDJSON. Default parser understands Juneau wire protocol; falls back to treating unknown chunks as plain text. Options: `method`, `headers`, `getHeaders`, `getBody`, `credentials`, `parseChunk`.
-- `mockAdapter` — dev-only, keyword-triggered scenarios: table, proposal, activity, help, error.
+- `mockAdapter` — dev-only, keyword-triggered scenarios: table, entity, proposal, activity, help, error.
 
 Both adapters accept `credentials?: RequestCredentials` for cross-origin cookie auth (`'include'`).
 
@@ -161,7 +172,7 @@ Each SSE `data:` line or NDJSON line must be one of:
 
 { "type": "activity", "id"?: "string", "title": "string", "description"?: "string", "status": "running" | "done" | "failed", "metadata"?: {} }
 
-{ "type": "part", "part": { "type": "table", ... } | { "type": "proposal", ... } }
+{ "type": "part", "part": { "type": "table", ... } | { "type": "entity", ... } | { "type": "entity-list", ... } | { "type": "proposal", ... } }
 
 { "type": "done" }
 

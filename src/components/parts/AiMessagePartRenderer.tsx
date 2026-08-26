@@ -2,17 +2,22 @@ import type { ReactNode } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type {
+  AiEntity,
   AiMessagePart,
   AiTextPart,
   AiTablePart as AiTablePartType,
   AiProposalPart,
   AiActivityPart as AiActivityPartType,
+  AiEntityPart as AiEntityPartType,
+  AiEntityListPart as AiEntityListPartType,
   AiErrorPart,
 } from '../../core/types';
 import { IconWarning } from '../icons';
 import { AiTablePart } from './AiTablePart';
 import { AiProposalCard } from './AiProposalCard';
 import { AiActivityPart } from './AiActivityPart';
+import { AiEntityCard } from './AiEntityCard';
+import { AiEntityListPart } from './AiEntityListPart';
 import styles from './AiMessagePartRenderer.module.css';
 
 /**
@@ -27,11 +32,13 @@ type Props = {
   part: AiMessagePart;
   onProposalConfirm: (proposalId: string, payload: unknown) => void;
   onProposalCancel: (proposalId: string) => void;
+  /** Makes entity cards clickable — receives the entity and its optional entityType. */
+  onEntityClick?: (entity: AiEntity, entityType?: string) => void;
   /** Called before the built-in switch — a non-nullish return value wins. */
   renderPart?: RenderPartFn;
 };
 
-export function AiMessagePartRenderer({ part, onProposalConfirm, onProposalCancel, renderPart }: Props) {
+export function AiMessagePartRenderer({ part, onProposalConfirm, onProposalCancel, onEntityClick, renderPart }: Props) {
   // Consumer renderer takes priority — lets it override built-ins too
   if (renderPart) {
     const custom = renderPart(part);
@@ -62,6 +69,10 @@ export function AiMessagePartRenderer({ part, onProposalConfirm, onProposalCance
           onCancel={onProposalCancel}
         />
       );
+    case 'entity':
+      return <AiEntityCard part={part as AiEntityPartType} onEntityClick={onEntityClick} />;
+    case 'entity-list':
+      return <AiEntityListPart part={part as AiEntityListPartType} onEntityClick={onEntityClick} />;
     case 'error':
       return (
         <span className={styles.errorText}>

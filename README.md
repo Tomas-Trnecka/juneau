@@ -45,7 +45,7 @@ It receives the conversation history and streams back typed events:
 ```ts
 type AiStreamEvent =
   | { type: 'text';  text: string }       // streamed text chunk — append to current bubble
-  | { type: 'part';  part: AiMessagePart } // rich UI block (table, proposal, activity, error)
+  | { type: 'part';  part: AiMessagePart } // rich UI block (table, entity, entity-list, proposal, activity, error)
   | { type: 'done' }                       // stream finished cleanly
   | { type: 'error'; message: string }     // stream failed
 ```
@@ -300,8 +300,10 @@ If your backend is built specifically for Juneau (e.g. Tappeer), stream newline-
 { "type": "activity", "id": "doc-search",   "title": "Searching document", "status": "running" }
 { "type": "activity", "id": "doc-search",   "title": "Document found", "description": "INV-2024-0894", "status": "done" }
 
-// Rich block — table or proposal
+// Rich block — table, entity, entity list, or proposal
 { "type": "part", "part": { "type": "table", "columns": ["Name", "Amount"], "rows": [...] } }
+{ "type": "part", "part": { "type": "entity", "entityType": "invoice", "entity": { "id": "...", "title": "...", "subtitle": "...", "fields": [{ "label": "Status", "value": "Approved", "badge": "success" }] } } }
+{ "type": "part", "part": { "type": "entity-list", "title": "3 results", "entities": [...] } }
 { "type": "part", "part": { "type": "proposal", "proposal": { "id": "...", "title": "..." } } }
 
 // Stream finished cleanly
@@ -331,6 +333,7 @@ Shipped for local development. No backend needed — responds to keywords in the
 |---|---|
 | `"show"`, `"list"`, `"data"`, `"table"` | A rendered data table |
 | `"suggest"`, `"recommend"`, `"proposal"` | A proposal card with confirm/cancel |
+| `"entity"`, `"card"`, `"detail"`, `"find"` | An entity list + entity detail card |
 | `"activity"`, `"progress"`, `"document"` | An activity timeline with running/done states |
 | `"help"`, `"what can you do"` | Capability overview |
 | `"error"`, `"fail"` | Simulated error response |
@@ -465,6 +468,8 @@ The sidebar anchors to the bottom-right of the viewport and opens at 60% screen 
 | `height` | `string` | Height when open. Any CSS value. Defaults to `'60vh'`. |
 | `className` | `string` | Added to the `<aside>` element. |
 | `style` | `CSSProperties` | Inline styles on the `<aside>`. |
+| `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
+| `onEntityClick` | `(entity, entityType?) => void` | Makes entity cards clickable — e.g. navigate to the record. |
 
 ---
 
@@ -515,6 +520,7 @@ function MyPage() {
 | `sendIcon` | `ReactNode` | Override send button icon. |
 | `placeholder` | `string` | Input placeholder text. |
 | `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
+| `onEntityClick` | `(entity, entityType?) => void` | Makes entity cards clickable — e.g. navigate to the record. |
 
 ---
 
@@ -526,7 +532,7 @@ Both `AiSidebar` and `AiChat` accept a `renderPart` prop — an escape hatch for
 type RenderPartFn = (part: AiMessagePart) => ReactNode | null | undefined;
 ```
 
-It is called **before** the built-in renderers for every message part. Return a ReactNode to render it; return `null`/`undefined` to fall through to the built-ins (`text`, `table`, `proposal`, `activity`, `error`).
+It is called **before** the built-in renderers for every message part. Return a ReactNode to render it; return `null`/`undefined` to fall through to the built-ins (`text`, `table`, `entity`, `entity-list`, `proposal`, `activity`, `error`).
 
 The backend can stream any custom part through the standard wire protocol:
 
@@ -686,6 +692,8 @@ Assistant messages are composed of typed **parts**. Text is streamed chunk by ch
 |---|---|---|
 | `text` | `{ type: 'text', text: string }` stream events, accumulated | Markdown via `react-markdown` — safe against XSS |
 | `table` | `{ type: 'part', part: { type: 'table', ... } }` | `AiTablePart` |
+| `entity` | `{ type: 'part', part: { type: 'entity', ... } }` | `AiEntityCard` |
+| `entity-list` | `{ type: 'part', part: { type: 'entity-list', ... } }` | `AiEntityListPart` |
 | `proposal` | `{ type: 'part', part: { type: 'proposal', ... } }` | `AiProposalCard` |
 | `activity` | `{ type: 'part', part: { type: 'activity', ... } }` | `AiActivityPart` |
 | `error` | `{ type: 'error', message: string }` or `{ type: 'part', part: { type: 'error', ... } }` | Inline error in bubble |
@@ -754,6 +762,47 @@ yield {
   },
 };
 ```
+
+**Emitting an entity or entity list:**
+
+Entity parts render structured records as cards — a title, optional subtitle, and labelled field rows. Field values can render as badges (`success` / `warning` / `danger` / `neutral`). Pass `onEntityClick` to `AiSidebar` / `AiChat` to make the cards clickable (e.g. navigate to the record); `entityType` and `entity.payload` are forwarded so consumers can route without guessing.
+
+```ts
+// Single entity card
+yield {
+  type: 'part',
+  part: {
+    type: 'entity',
+    entityType: 'invoice',           // optional kind — forwarded to onEntityClick and custom renderers
+    entity: {
+      id: 'inv-0894',                // forwarded to onEntityClick
+      title: 'INV-2024-0894',
+      subtitle: 'DataSys a.s.',
+      fields: [
+        { label: 'Amount', value: 'CZK 390 000' },
+        { label: 'Status', value: 'Approved', badge: 'success' },
+      ],
+      payload: { internalId: 42 },   // anything — not rendered, available in onEntityClick
+    },
+  },
+};
+
+// List of entities with an optional heading
+yield {
+  type: 'part',
+  part: {
+    type: 'entity-list',
+    title: '2 results',
+    entityType: 'invoice',
+    entities: [
+      { id: 'inv-1', title: 'INV-2024-0894', fields: [{ label: 'Status', value: 'Approved', badge: 'success' }] },
+      { id: 'inv-2', title: 'INV-2024-0895', fields: [{ label: 'Status', value: 'Pending', badge: 'warning' }] },
+    ],
+  },
+};
+```
+
+For fully custom entity layouts, override the built-in card via `renderPart` — return your own component for `part.type === 'entity'` / `'entity-list'` and it wins over the default renderer.
 
 ---
 

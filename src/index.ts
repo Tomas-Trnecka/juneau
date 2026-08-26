@@ -14,6 +14,11 @@ export type {
   AiActivityPart as AiActivityPartType,
   AiActivityStatus,
   AiErrorPart,
+  AiEntity,
+  AiEntityField,
+  AiEntityBadgeTone,
+  AiEntityPart as AiEntityPartType,
+  AiEntityListPart as AiEntityListPartType,
   AiBackendAdapter,
   AiAdapterInput,
   AiStreamEvent,
@@ -72,3 +77,5 @@ export type { RenderPartFn } from './components/parts/AiMessagePartRenderer';
 export { AiTablePart } from './components/parts/AiTablePart';
 export { AiProposalCard } from './components/parts/AiProposalCard';
 export { AiActivityPart } from './components/parts/AiActivityPart';
+export { AiEntityCard } from './components/parts/AiEntityCard';
+export { AiEntityListPart } from './components/parts/AiEntityListPart';

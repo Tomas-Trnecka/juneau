@@ -1,0 +1,16 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 8px 0;
+}
+
+.list > * {
+  margin: 4px 0;
+}
+
+.listTitle {
+  font-weight: 600;
+  font-size: var(--juneau-font-size-sm);
+  color: var(--juneau-color-text-secondary);
+  margin-bottom: 2px;
+}

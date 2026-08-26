@@ -17,6 +17,8 @@ export const mockAdapter: AiBackendAdapter = {
       yield* scenarioTable();
     } else if (query.includes('proposal') || query.includes('suggest') || query.includes('recommend')) {
       yield* scenarioProposal();
+    } else if (query.includes('entity') || query.includes('card') || query.includes('detail') || query.includes('find')) {
+      yield* scenarioEntity();
     } else if (query.includes('help') || query.includes('what can') || query.includes('how do')) {
       yield* scenarioHelp();
     } else if (query.includes('error') || query.includes('fail') || query.includes('break')) {
@@ -130,6 +132,68 @@ async function* scenarioProposal(): AsyncIterable<AiStreamEvent> {
   yield { type: 'done' };
 }
 
+async function* scenarioEntity(): AsyncIterable<AiStreamEvent> {
+  yield* streamText('I found these records matching your request:\n\n', 30);
+  await delay(400);
+
+  yield {
+    type: 'part',
+    part: {
+      type: 'entity-list',
+      title: '2 records found',
+      entityType: 'record',
+      entities: [
+        {
+          id: 'rec-2024-0894',
+          title: 'REC-2024-0894',
+          subtitle: 'DataSys a.s.',
+          fields: [
+            { label: 'Amount', value: 'CZK 390 000' },
+            { label: 'Due date', value: '2024-08-15' },
+            { label: 'Status', value: 'Approved', badge: 'success' },
+          ],
+        },
+        {
+          id: 'rec-2024-0895',
+          title: 'REC-2024-0895',
+          subtitle: 'NetFlow s.r.o.',
+          fields: [
+            { label: 'Amount', value: 'CZK 218 500' },
+            { label: 'Due date', value: '2024-08-22' },
+            { label: 'Status', value: 'Pending', badge: 'warning' },
+          ],
+        },
+      ],
+    },
+  };
+
+  await delay(300);
+
+  yield* streamText('\nHere is the detail of the first one:\n\n', 25);
+  await delay(300);
+
+  yield {
+    type: 'part',
+    part: {
+      type: 'entity',
+      entityType: 'record',
+      entity: {
+        id: 'rec-2024-0894',
+        title: 'REC-2024-0894',
+        subtitle: 'DataSys a.s. — Consulting',
+        fields: [
+          { label: 'Amount', value: 'CZK 390 000' },
+          { label: 'Issued', value: '2024-07-15' },
+          { label: 'Due date', value: '2024-08-15' },
+          { label: 'Status', value: 'Approved', badge: 'success' },
+        ],
+      },
+    },
+  };
+
+  yield { type: 'done' };
+}
+
 async function* scenarioHelp(): AsyncIterable<AiStreamEvent> {
   yield* streamText('I\'m a general-purpose AI assistant. Here\'s what I can help with:\n\n', 30);
   await delay(200);
@@ -157,6 +221,8 @@ async function* scenarioDefault(query: string): AsyncIterable<AiStreamEvent> {
   yield* streamText('- Say **"show"**, **"list"**, **"data"**, or **"table"** → renders a data table\n', 22);
   await delay(150);
   yield* streamText('- Say **"suggest"**, **"recommend"**, or **"proposal"** → renders a proposal card\n', 22);
+  await delay(150);
+  yield* streamText('- Say **"entity"**, **"card"**, **"detail"**, or **"find"** → renders entity cards\n', 22);
   await delay(150);
   yield* streamText('- Say **"help"** or **"what can you do"** → shows capabilities\n', 22);
   await delay(150);
