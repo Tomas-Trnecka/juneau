@@ -201,8 +201,8 @@ export async function* withToolRecovery(options: ToolRecoveryOptions): AsyncIter
  * which is guaranteed at the call site.
  */
 async function resolvePhase1Messages(result: {
-  messages?: Promise<unknown[]>;
-  response?: Promise<{ messages?: unknown[] }>;
+  messages?: PromiseLike<unknown[]>;
+  response?: PromiseLike<{ messages?: unknown[] }>;
 }): Promise<unknown[] | null> {
   if (result.messages) {
     const messages = await result.messages;

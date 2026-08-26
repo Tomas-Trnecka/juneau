@@ -102,13 +102,14 @@ export interface ToolRecoveryStreamResult {
    * history — user, assistant(tool-call), and tool(tool-result) turns.
    * Preferred source for phase 3; Gemini rejects histories where a tool-call
    * turn is not followed by its tool-result turn.
+   * PromiseLike so ai-sdk's StreamTextResult satisfies the shape without wrapping.
    */
-  messages?: Promise<unknown[]>;
+  messages?: PromiseLike<unknown[]>;
   /**
    * Fallback only — may resolve to an incomplete subset of the history
    * (observed: missing tool-result turns). Used when `messages` is unavailable.
    */
-  response?: Promise<{ messages?: unknown[] }>;
+  response?: PromiseLike<{ messages?: unknown[] }>;
 }
 
 export interface ToolRecoveryOptions {

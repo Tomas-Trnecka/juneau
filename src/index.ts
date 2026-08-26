@@ -38,6 +38,7 @@ export { mockAdapter } from './adapters/mockAdapter';
 export { createSseAdapter } from './adapters/createSseAdapter';
 export type { SseAdapterOptions, SseEventParser } from './adapters/createSseAdapter';
 export { createFetchStreamAdapter } from './adapters/createFetchStreamAdapter';
+export { parseJuneauWire } from './adapters/parseJuneauWire';
 export type { FetchStreamAdapterOptions, FetchChunkParser } from './adapters/createFetchStreamAdapter';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
