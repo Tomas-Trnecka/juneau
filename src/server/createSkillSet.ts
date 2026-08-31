@@ -48,8 +48,22 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
   const debug = options.debug ?? false;
   const activityBuffer: string[] = [];
   const calledSkillNames: string[] = [];
+  const calledSkillIds: number[] = [];
   let hadFailure = false;
   let failureContext: string | null = null;
+
+  // Validate ID uniqueness and build lookup map
+  const skillsById = new Map<number, SkillDefinition>();
+  const idToName = new Map<number, string>();
+  for (const [name, skill] of Object.entries(skills)) {
+    if (skillsById.has(skill.id)) {
+      throw new Error(
+        `[juneau] createSkillSet: skills "${idToName.get(skill.id)}" and "${name}" share the same ID (${skill.id}). IDs must be unique.`
+      );
+    }
+    skillsById.set(skill.id, skill);
+    idToName.set(skill.id, name);
+  }
 
   const tools: Record<string, unknown> = {};
 
@@ -60,6 +74,7 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
       execute: async (input: unknown) => {
         if (!calledSkillNames.includes(name)) {
           calledSkillNames.push(name);
+          calledSkillIds.push(skill.id);
         }
 
         if (debug) {
@@ -145,6 +160,10 @@ export function createSkillSet(skills: SkillMap, options: SkillSetOptions = {}):
     skills,
 
     calledSkillNames,
+
+    calledSkillIds,
+
+    skillsById,
 
     drainActivities(): string[] {
       return activityBuffer.splice(0, activityBuffer.length);

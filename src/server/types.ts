@@ -23,6 +23,12 @@ export interface SkillExecuteContext {
 export interface SkillDefinition<TInput extends ZodType = ZodType> {
   /** Human-readable name, e.g. "Invoice Search". Used by buildSkillIndex. */
   title: string;
+  /**
+   * Numeric identifier for this skill — chosen by the consumer, must be unique across the skill map.
+   * Emitted in buildSkillIndex so the model can request a skill by ID rather than by name.
+   * createSkillSet throws at startup if two skills share the same ID.
+   */
+  id: number;
   description: string;
   /**
    * Workflow instructions for the agent — separate from description. Loaded
@@ -63,6 +69,19 @@ export interface SkillSet {
    * workflow instructions lazily for phase 3.
    */
   calledSkillNames: string[];
+
+  /**
+   * Numeric IDs of skills the model called, in call order (deduplicated).
+   * Mirrors calledSkillNames but by ID — use with selectSkillsById() when
+   * routing skill dispatch by ID instead of name.
+   */
+  calledSkillIds: number[];
+
+  /**
+   * Lookup map from consumer-supplied numeric skill ID to SkillDefinition.
+   * Built at createSkillSet() time. Use to resolve a skill by ID without string comparisons.
+   */
+  skillsById: Map<number, SkillDefinition>;
 
   /**
    * Returns and clears all buffered activity wire SSE strings.
@@ -131,6 +150,29 @@ export interface ToolRecoveryOptions {
    */
   onFinish?: (result: { text: string }) => void;
   /** Emit structured console.debug logs for phase decisions and chunk flow. Default: false */
+  debug?: boolean;
+}
+
+export interface SkillDispatchOptions {
+  /**
+   * Phase 1 — stream with tools and a compact skill index as the system prompt.
+   * The model picks a skill by calling one of the tools.
+   */
+  phase1: () => ToolRecoveryStreamResult;
+  /**
+   * Phase 2 — called unconditionally after phase 1 when at least one skill was
+   * called. Receives the full skill instructions (from selectSkillsById) and the
+   * complete phase 1 message history (user + tool-call + tool-result turns).
+   * Call the model again without tools so it reads the instructions and responds.
+   */
+  phase2: (instructions: string, messages: unknown[]) => { fullStream: AsyncIterable<unknown> };
+  skillSet: SkillSet;
+  /**
+   * Called once right before the final done event with the assistant text
+   * accumulated across all phases. Not called on error paths.
+   */
+  onFinish?: (result: { text: string }) => void;
+  /** Emit structured console.debug logs for phase decisions. Default: false */
   debug?: boolean;
 }
 

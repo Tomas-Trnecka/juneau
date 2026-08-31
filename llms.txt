@@ -190,7 +190,7 @@ Shared parser utility: `parseJuneauWire(raw: string): AiStreamEvent[]` — used 
 Node-only helpers for Juneau-compatible backends. Import from the `/server` subpath (keeps zod out of the browser bundle):
 
 ```ts
-import { toSdkMessages, createSkillSet, buildSkillIndex, selectSkills, streamToWire, withToolRecovery } from 'juneau/server';
+import { toSdkMessages, createSkillSet, buildSkillIndex, selectSkills, selectSkillsById, streamToWire, withToolRecovery, withSkillDispatch } from 'juneau/server';
 ```
 
 ### toSdkMessages(messages: AiMessage[]): CoreMessage[]
@@ -199,15 +199,18 @@ Converts Juneau message history to ai-sdk's CoreMessage format. Extracts text pa
 ### createSkillSet(skills, options?) → SkillSet
 Wraps skill definitions into ai-sdk tool definitions with a built-in activity event buffer. Each tool call automatically emits `running`, `done`, and `failed` Juneau wire SSE strings into the buffer.
 
-SkillDefinition fields: `title`, `description`, `instructions?` (workflow text, lazily loaded via selectSkills), `readOnly?` (default true), `requiresConfirmation?` (default false), `tools?` (skill composition — validated at startup, throws on unknown reference), `input` (ZodType), `labels.running`, `labels.done`, `labels.failed?`, `execute(input, { emit })`.
+SkillDefinition fields: `title`, `description`, `id` (numeric, required — chosen by the consumer, must be unique across the skill map; createSkillSet throws at startup on duplicates), `instructions?` (workflow text, lazily loaded via selectSkills/selectSkillsById), `readOnly?` (default true), `requiresConfirmation?` (default false), `tools?` (skill composition — validated at startup, throws on unknown reference), `input` (ZodType), `labels.running`, `labels.done`, `labels.failed?`, `execute(input, { emit })`.
 
-SkillSet also exposes `skills` (original definitions) and `calledSkillNames` (skills the model called during phase 1, deduplicated, in call order).
+SkillSet also exposes `skills` (original definitions), `skillsById` (Map&lt;number, SkillDefinition&gt; — lookup by numeric ID), `calledSkillNames` (skills the model called during phase 1, deduplicated, in call order), and `calledSkillIds` (same, but as numeric IDs — use with selectSkillsById).
 
 ### buildSkillIndex(skillSet) → string
-Compact one-liner-per-skill index for the system prompt: `- invoiceSearch (read): Find invoices…` / `- invoiceApprove (write, requires confirmation): …`. Registry-driven — adding a skill updates the index automatically.
+Compact one-liner-per-skill index for the system prompt: `[1] invoiceSearch (read): Find invoices…` / `[2] invoiceApprove (write, requires confirmation): …`. Numeric ID is included so the model can request skills by ID — avoids string comparisons on the backend. Registry-driven — adding a skill updates the index automatically.
 
 ### selectSkills(skillSet, skillNames) → string
 Concatenated `instructions` for the given skill names (typically `skillSet.calledSkillNames` after phase 1). Lazy loading: full workflow instructions enter the prompt only for skills the model actually used. Unknown names and skills without instructions are skipped; returns `''` when nothing matches.
+
+### selectSkillsById(skillSet, skillIds) → string
+Same as selectSkills but resolves by numeric ID — use with `skillSet.calledSkillIds` to avoid string comparisons entirely. Unknown IDs and skills without instructions are skipped; returns `''` when nothing matches.
 
 `execute` receives a `SkillExecuteContext` as second argument: `emit(part)` pushes a custom part wire event (`{ type: 'part', part }`) into the same buffer as activities — drained by `streamToWire` at the same points. Available synchronously at any point during execution. Use to stream rich widgets (e.g. invoice cards) alongside the tool result:
 
@@ -225,6 +228,26 @@ SkillSetOptions: `language?` (default: `'en'`) — selects which label variant t
 
 ### streamToWire(fullStream, skillSet?, options?) → AsyncIterable\<string\>
 Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all ai-sdk v7 text chunk types (`text-delta` and `text`, with `textDelta` v6 fallback). Drains `skillSet.drainActivities()` before each text chunk and once after the loop. Emits `done` event at the end. `options.debug` logs every chunk received.
+
+### withSkillDispatch(options) → AsyncIterable\<string\>
+Deliberate 2-phase skill dispatch pattern — the clean alternative to mashing all skill instructions into one big system prompt.
+
+Phase 1: stream with `buildSkillIndex` as the system prompt and thin tool definitions. The model picks a skill by calling a tool — `calledSkillIds` is populated as tools fire.
+Phase 2: always runs when at least one skill was called. Receives the full workflow instructions for the called skills (`selectSkillsById`) and the complete phase 1 message history (user + tool-call + tool-result turns). The model is called again without tools so it reads the instructions and produces a text response.
+If no skill was called in phase 1 (model answered directly), phase 1 text is emitted as-is and the stream ends cleanly.
+Phase 2 errors are emitted as wire `error` events, never swallowed.
+
+Options: `phase1: () => ToolRecoveryStreamResult`, `phase2: (instructions: string, messages: unknown[]) => { fullStream }`, `skillSet`, `onFinish?`, `debug?`.
+
+```ts
+for await (const chunk of withSkillDispatch({
+  phase1: () => streamText({ model, system: buildSkillIndex(skillSet), messages: sdkMessages, tools: skillSet.tools, maxSteps: 1 }),
+  phase2: (instructions, history) => streamText({ model, system: instructions, messages: history }),
+  skillSet,
+})) {
+  res.write(chunk);
+}
+```
 
 ### withToolRecovery(options) → AsyncIterable\<string\>
 Multi-phase streaming pattern for Gemini 2.5 Flash tool call recovery. Phase 1 streams with tools. If a tool failed and no text was produced, phase 2 calls the model without tools, injecting `failureContext` as an assistant message to force a text response. If the tool succeeded but no text was produced (Gemini treats the tool call as its complete response — confirmed chunk sequence: tool-call → tool-result → finish-step → finish, no text-delta), optional phase 3 receives the full phase 1 message history (resolved from the ai-sdk result's `messages` promise — resolves to ALL turns incl. tool-call + tool-result after the stream is consumed; `response.messages` is fallback only, may miss tool-result turns which Gemini rejects) and calls the model again without tools to summarise the result. Without `phase3`, emits `done` cleanly. Phase 2/3 errors are emitted as wire `error` events, never swallowed. `debug` logs the resolved phase 3 message array and warns when no tool-result turn is present.

@@ -1,6 +1,6 @@
 {
   "name": "juneau",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Open-source React/TypeScript library for AI chat UI components",
   "type": "module",
   "main": "./dist/index.cjs",

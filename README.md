@@ -187,7 +187,7 @@ export const myAdapter: AiBackendAdapter = {
 If your backend uses ai-sdk, Juneau ships server-side helpers that eliminate the boilerplate of history mapping, activity streaming, and tool failure recovery. Import from the `/server` subpath — zod stays out of the browser bundle.
 
 ```ts
-import { toSdkMessages, createSkillSet, buildSkillIndex, selectSkills, withToolRecovery } from 'juneau/server';
+import { toSdkMessages, createSkillSet, buildSkillIndex, selectSkills, selectSkillsById, withToolRecovery, withSkillDispatch } from 'juneau/server';
 ```
 
 **Full integration in ~15 lines:**
@@ -240,28 +240,71 @@ execute: async ({ query }, { emit }) => {
 
 Emitted parts share the activity buffer and are drained by `streamToWire` at the same points — they appear in the stream in emit order, before the model's text response.
 
-Skill metadata: `title` (human-readable name), `instructions?` (agent workflow text — lazily loaded via `selectSkills`), `readOnly?` (default `true`), `requiresConfirmation?` (default `false`), `tools?` (skill composition — validated at startup, `createSkillSet` throws on a reference to an unknown skill).
+Skill metadata: `title` (human-readable name), `id` (numeric, required — chosen by the consumer, must be unique across the skill map; `createSkillSet` throws at startup on duplicates), `instructions?` (agent workflow text — lazily loaded via `selectSkills` / `selectSkillsById`), `readOnly?` (default `true`), `requiresConfirmation?` (default `false`), `tools?` (skill composition — validated at startup, `createSkillSet` throws on a reference to an unknown skill).
 
-`SkillSet` members: `tools`, `skills`, `calledSkillNames`, `drainActivities()`, `hadFailure`, `failureContext`.
+`SkillSet` members: `tools`, `skills`, `skillsById` (Map&lt;number, SkillDefinition&gt;), `calledSkillNames`, `calledSkillIds`, `drainActivities()`, `hadFailure`, `failureContext`.
 
 `SkillSetOptions`: `language?` — selects label variant (`'en'` default). `debug?` — emit `console.debug` logs per skill execution (default: `false`).
 
 #### `buildSkillIndex(skillSet)`
 
-Generates a compact one-liner-per-skill index for the system prompt — registry-driven, so the prompt never drifts from the actual skills:
+Generates a compact one-liner-per-skill index for the system prompt — registry-driven, so the prompt never drifts from the actual skills. Each line includes a numeric ID so the model can request skills by ID rather than by name:
 
 ```
-- invoiceSearch (read): Find invoices by number, supplier, date, or status.
-- invoiceApprove (write, requires confirmation): Approve an invoice.
+[1] invoiceSearch (read): Find invoices by number, supplier, date, or status.
+[2] invoiceApprove (write, requires confirmation): Approve an invoice.
 ```
 
 #### `selectSkills(skillSet, skillNames)`
 
-Returns concatenated `instructions` for the given skill names — typically `skillSet.calledSkillNames` after phase 1, injected into phase 3's system prompt. Workflow instructions load lazily, only for skills the model actually used.
+Returns concatenated `instructions` for the given skill names — typically `skillSet.calledSkillNames` after phase 1. Workflow instructions load lazily, only for skills the model actually used.
+
+#### `selectSkillsById(skillSet, skillIds)`
+
+Same as `selectSkills` but resolves by numeric ID — use with `skillSet.calledSkillIds` to avoid string comparisons entirely. Unknown IDs and skills without instructions are skipped silently.
 
 #### `streamToWire(fullStream, skillSet?, options?)`
 
 Converts ai-sdk `fullStream` to Juneau wire SSE strings. Handles all ai-sdk v7 text chunk types (`text-delta` and `text`), drains activity buffer at the right moment, emits `done` at the end. Pass `{ debug: true }` to log every chunk received from ai-sdk.
+
+#### `withSkillDispatch(options)`
+
+Deliberate 2-phase skill dispatch — the clean alternative to sending every skill's full instructions on every request.
+
+**Phase 1:** stream with `buildSkillIndex` as the system prompt and thin tool definitions. The model picks a skill by calling a tool — `calledSkillIds` is populated as tools fire.
+
+**Phase 2:** always runs when at least one skill was called. Receives the full workflow instructions for the called skills (via `selectSkillsById`) and the complete phase 1 message history including tool-call and tool-result turns. The model is called again without tools so it reads the instructions and produces a text response.
+
+If no skill was called (model answered directly), the phase 1 text is emitted as-is and the stream ends cleanly — no phase 2 needed.
+
+```ts
+for await (const chunk of withSkillDispatch({
+  phase1: () => streamText({
+    model,
+    system: buildSkillIndex(skillSet), // compact index: [1] search (read): ...
+    messages: sdkMessages,
+    tools: skillSet.tools,
+    maxSteps: 1,
+  }),
+  phase2: (instructions, history) => streamText({
+    model,
+    system: instructions, // full workflow text for the chosen skill only
+    messages: history,    // full phase 1 history incl. tool-call + tool-result
+  }),
+  skillSet,
+  onFinish: ({ text }) => saveAssistantReply(text),
+})) {
+  res.write(chunk);
+}
+```
+
+| Option | Type | Description |
+|---|---|---|
+| `phase1` | `() => ToolRecoveryStreamResult` | Phase 1 stream — model picks a skill via tool call |
+| `phase2` | `(instructions, messages) => { fullStream }` | Phase 2 stream — model executes with full instructions |
+| `skillSet` | `SkillSet` | The skill set used in phase 1 |
+| `onFinish` | `({ text }) => void` | Called once before `done` with accumulated text. Not called on error paths. |
+| `debug` | `boolean` | Log phase decisions to `console.debug`. Default: `false`. |
 
 #### `withToolRecovery(options)`
 
@@ -282,6 +325,8 @@ yield* withToolRecovery({
 #### Type re-exports
 
 The wire/message types shared with the client — `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiTextPart`, `AiSerializedMessage`, `AiStreamEvent`, `JuneauWireEvent` (and its member types) — are also re-exported from `juneau/server`, so backend code never needs to import from the client entry.
+
+Server-only types: `SkillSet`, `SkillDefinition`, `SkillExecuteContext`, `SkillSetOptions`, `SkillDispatchOptions`, `ToolRecoveryOptions`, `ToolRecoveryStreamResult`, `StreamToWireOptions`, `CoreMessage`.
 
 ---
 
