@@ -36,6 +36,22 @@
   color: var(--juneau-color-text-inverse);
 }
 
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.user .content {
+  align-items: flex-end;
+}
+
+.assistant .content {
+  align-items: flex-start;
+}
+
 .bubble {
   max-width: 85%;
   padding: 10px 14px;
@@ -43,6 +59,20 @@
   font-size: var(--juneau-font-size-md);
   line-height: 1.6;
   word-break: break-word;
+}
+
+/* Cards, tables and custom parts span the full panel width with no bubble chrome. */
+.block {
+  width: 100%;
+  min-width: 0;
+  font-size: var(--juneau-font-size-md);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+/* Extra breathing room so follow-up prose never reads as cramped against a card. */
+.block:not(:last-child) {
+  margin-bottom: 6px;
 }
 
 .user .bubble {
