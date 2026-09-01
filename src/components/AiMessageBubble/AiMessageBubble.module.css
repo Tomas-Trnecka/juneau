@@ -36,10 +36,41 @@
   color: var(--juneau-color-text-inverse);
 }
 
+/*
+ * Column used only by messages that carry a card. Plain chat messages render the
+ * bubble directly so their layout and avatar alignment stay untouched.
+ */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
 .bubble {
   max-width: 85%;
   padding: 10px 14px;
   border-radius: var(--juneau-radius-lg);
+  font-size: var(--juneau-font-size-md);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+/* Text alongside a card keeps its usual side so the chat rhythm is preserved. */
+.user .content > .bubble {
+  align-self: flex-end;
+}
+
+.assistant .content > .bubble {
+  align-self: flex-start;
+}
+
+/* Cards span the full width of the chat column, with no bubble chrome. */
+.card {
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
   font-size: var(--juneau-font-size-md);
   line-height: 1.6;
   word-break: break-word;

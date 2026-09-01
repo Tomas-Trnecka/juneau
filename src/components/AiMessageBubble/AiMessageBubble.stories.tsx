@@ -111,6 +111,42 @@ export const AssistantWithProposal: Story = {
   },
 };
 
+export const AssistantWithCardAndFollowUp: Story = {
+  args: {
+    message: {
+      id: 'msg-6',
+      role: 'assistant',
+      parts: [
+        { type: 'text', text: 'I found the top supplier for Q2:' },
+        {
+          type: 'entity',
+          entity: {
+            id: 'sup-1',
+            title: 'Microsoft s.r.o.',
+            subtitle: 'Software · 3 invoices',
+            fields: [
+              { label: 'Total', value: '842 400 CZK' },
+              { label: 'Last invoice', value: '28. 6. 2025' },
+            ],
+          },
+        },
+        { type: 'text', text: 'Want me to break this down by month?' },
+      ],
+      createdAt: new Date(),
+    },
+    onProposalConfirm: () => {},
+    onProposalCancel: () => {},
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Cards span the full width with no bubble chrome, while the surrounding text keeps its own bubbles. Avatar placement is unchanged.',
+      },
+    },
+  },
+};
+
 export const AssistantError: Story = {
   args: {
     message: {
