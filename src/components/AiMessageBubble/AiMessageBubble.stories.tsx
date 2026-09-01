@@ -111,42 +111,6 @@ export const AssistantWithProposal: Story = {
   },
 };
 
-export const AssistantCardThenText: Story = {
-  args: {
-    message: {
-      id: 'msg-6',
-      role: 'assistant',
-      parts: [
-        { type: 'text', text: 'I found the top supplier for Q2:' },
-        {
-          type: 'entity',
-          entity: {
-            id: 'sup-1',
-            title: 'Microsoft s.r.o.',
-            subtitle: 'Software · 3 invoices',
-            fields: [
-              { label: 'Total', value: '842 400 CZK' },
-              { label: 'Last invoice', value: '28. 6. 2025' },
-            ],
-          },
-        },
-        { type: 'text', text: 'Want me to break this down by month?' },
-      ],
-      createdAt: new Date(),
-    },
-    onProposalConfirm: () => {},
-    onProposalCancel: () => {},
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Card parts break out of the bubble: full panel width, no bubble chrome, and spacing below so follow-up text is not cramped.',
-      },
-    },
-  },
-};
-
 export const AssistantError: Story = {
   args: {
     message: {
