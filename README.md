@@ -515,6 +515,21 @@ The sidebar anchors to the bottom-right of the viewport and opens at 60% screen 
 | `style` | `CSSProperties` | Inline styles on the `<aside>`. |
 | `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
 | `onEntityClick` | `(entity, entityType?) => void` | Makes entity cards clickable — e.g. navigate to the record. |
+| `headerActions` | `ReactNode` | Extra controls in the header, left of reset/minimize. Rendered as given — Juneau never interprets them. |
+
+**Header chrome (`headerActions`):**
+
+The header exposes a slot for consumer-owned controls — a settings button, a link, anything. Juneau renders the node untouched and owns none of its behaviour:
+
+```tsx
+<AiSidebar
+  headerActions={
+    <button onClick={() => setSettingsOpen(true)} aria-label='Chat settings'>
+      ⚙
+    </button>
+  }
+/>
+```
 
 ---
 

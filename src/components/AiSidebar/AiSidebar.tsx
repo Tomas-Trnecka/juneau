@@ -41,6 +41,11 @@ type Props = {
   renderPart?: RenderPartFn;
   /** Makes entity cards clickable — receives the entity and its optional entityType. */
   onEntityClick?: (entity: AiEntity, entityType?: string) => void;
+  /**
+   * Extra controls rendered in the header, left of the reset/minimize buttons.
+   * Use it for consumer-owned chrome such as a settings button.
+   */
+  headerActions?: ReactNode;
 };
 
 export function AiSidebar({
@@ -54,6 +59,7 @@ export function AiSidebar({
   onReset,
   renderPart,
   onEntityClick,
+  headerActions,
 }: Props) {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -86,6 +92,7 @@ export function AiSidebar({
         onMinimize={() => setIsMinimized(v => !v)}
         isMinimized={isMinimized}
         onReset={handleReset}
+        headerActions={headerActions}
       />
 
       {!isMinimized && (

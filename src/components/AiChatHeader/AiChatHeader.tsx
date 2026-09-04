@@ -11,9 +11,21 @@ type Props = {
   icon?: ReactNode;
   /** Called when the reset button is clicked. When provided, a reset button is shown. */
   onReset?: () => void;
+  /**
+   * Extra controls rendered left of the built-in reset/minimize buttons.
+   * Juneau renders them as given and never interprets them — the consumer owns their behaviour.
+   */
+  headerActions?: ReactNode;
 };
 
-export function AiChatHeader({ title, onMinimize, isMinimized, icon, onReset }: Props) {
+export function AiChatHeader({
+  title,
+  onMinimize,
+  isMinimized,
+  icon,
+  onReset,
+  headerActions,
+}: Props) {
   const labels = useLabels();
 
   return (
@@ -24,8 +36,9 @@ export function AiChatHeader({ title, onMinimize, isMinimized, icon, onReset }: 
         </span>
         <span className={styles.title}>{title ?? labels.sidebarTitle}</span>
       </div>
-      {(onMinimize || onReset) && (
+      {(onMinimize || onReset || headerActions) && (
         <div className={styles.actions}>
+          {headerActions}
           {onReset && (
             <button
               className={styles.resetBtn}
