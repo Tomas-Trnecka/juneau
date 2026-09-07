@@ -38,6 +38,11 @@ type Props = {
    * through to the built-ins. Enables custom part types like invoice cards.
    */
   renderPart?: RenderPartFn;
+  /**
+   * Rendered instead of the default empty-state text when there are no messages.
+   * Use it for a rich "get started" hero — headline, suggestion chips, anything.
+   */
+  emptyState?: ReactNode;
   className?: string;
   style?: CSSProperties;
 };
@@ -67,6 +72,7 @@ export function AiChat({
   actions,
   sendIcon,
   renderPart,
+  emptyState,
   className,
   style,
 }: Props) {
@@ -84,6 +90,7 @@ export function AiChat({
         onEntityClick={onEntityClick}
         assistantIcon={assistantIcon}
         renderPart={renderPart}
+        emptyState={emptyState}
       />
 
       {error && <AiError message={error} />}
