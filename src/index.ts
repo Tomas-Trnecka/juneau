@@ -65,6 +65,7 @@ export { juneauCs } from './i18n/locales/cs';
 // ─── Components ───────────────────────────────────────────────────────────────
 export { AiSidebar } from './components/AiSidebar/AiSidebar';
 export { AiChat } from './components/AiChat/AiChat';
+export { AiChatHeader } from './components/AiChatHeader/AiChatHeader';
 export { AiMessageList } from './components/AiMessageList/AiMessageList';
 export { AiMessageBubble } from './components/AiMessageBubble/AiMessageBubble';
 export { AiInput } from './components/AiInput/AiInput';
