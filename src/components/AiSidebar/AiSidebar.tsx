@@ -46,6 +46,11 @@ type Props = {
    * Use it for consumer-owned chrome such as a settings button.
    */
   headerActions?: ReactNode;
+  /**
+   * Rendered instead of the default empty-state text when there are no messages.
+   * Use it for a rich "get started" hero — headline, suggestion chips, anything.
+   */
+  emptyState?: ReactNode;
 };
 
 export function AiSidebar({
@@ -60,6 +65,7 @@ export function AiSidebar({
   renderPart,
   onEntityClick,
   headerActions,
+  emptyState,
 }: Props) {
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -113,6 +119,7 @@ export function AiSidebar({
           sendIcon={sendIcon}
           renderPart={renderPart}
           onEntityClick={onEntityClick}
+          emptyState={emptyState}
         />
       )}
     </aside>
