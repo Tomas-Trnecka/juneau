@@ -111,6 +111,12 @@ The default theme is **black + pink** (inspired by Tappeer's design system).
 
 Only keys you provide are overridden — everything else falls back to defaults. Overrides are scoped to the provider's DOM subtree.
 
+**Every token in `tokens.css` must have a matching optional key in `JuneauTheme` and an entry in `buildThemeVars`** (JuneauProvider.tsx). When adding a token, update all three places.
+
+### Styling hooks (`data-juneau` attributes)
+
+Key elements carry stable `data-juneau` attributes (e.g. `data-juneau="message"`, `data-juneau="input-textarea"`, `data-juneau-role="user|assistant"`, `data-juneau-segment="bubble|card"`) so consumers can target them with plain CSS. Hashed CSS Module class names are **not** part of the public API — the attributes are. When adding a significant new element or component, give its root a `data-juneau` attribute and document it in the README table. Never rename or remove existing attribute values — they are a stability contract.
+
 ### Full token reference
 
 #### Colors

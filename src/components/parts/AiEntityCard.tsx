@@ -49,11 +49,12 @@ export function AiEntityCard({ part, onEntityClick }: Props) {
         type='button'
         className={`${styles.card} ${styles.cardClickable}`}
         onClick={() => onEntityClick(entity, entityType)}
+        data-juneau="entity-card"
       >
         {body}
       </button>
     );
   }
 
-  return <div className={styles.card}>{body}</div>;
+  return <div className={styles.card} data-juneau="entity-card">{body}</div>;
 }

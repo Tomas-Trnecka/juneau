@@ -13,6 +13,7 @@ export function AiTypingIndicator({ connecting = false }: Props) {
     <div
       className={styles.wrapper}
       aria-label={connecting ? labels.connectingMessage : labels.typingMessage}
+      data-juneau="typing-indicator"
     >
       <span className={styles.dot} />
       <span className={styles.dot} />

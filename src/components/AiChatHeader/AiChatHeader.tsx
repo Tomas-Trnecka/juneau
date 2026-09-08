@@ -29,7 +29,7 @@ export function AiChatHeader({
   const labels = useLabels();
 
   return (
-    <div className={styles.header}>
+    <div className={styles.header} data-juneau="header">
       <div className={styles.left}>
         <span className={styles.icon} aria-hidden="true">
           {icon ?? <IconWandMagicSparkles />}

@@ -7,7 +7,7 @@ type Props = {
 
 export function AiActivityPart({ part }: Props) {
   return (
-    <div className={styles.activity} data-status={part.status}>
+    <div className={styles.activity} data-status={part.status} data-juneau="activity-part">
       <span className={styles.indicator} aria-hidden="true" />
 
       <div className={styles.content}>

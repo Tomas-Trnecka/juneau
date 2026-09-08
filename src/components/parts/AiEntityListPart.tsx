@@ -10,7 +10,7 @@ type Props = {
 
 export function AiEntityListPart({ part, onEntityClick }: Props) {
   return (
-    <div className={styles.list}>
+    <div className={styles.list} data-juneau="entity-list-part">
       {part.title && <span className={styles.listTitle}>{part.title}</span>}
       {part.entities.map((entity, i) => (
         <AiEntityCard

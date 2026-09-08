@@ -85,6 +85,7 @@ export function AiSidebar({
     <aside
       className={[styles.sidebar, isMinimized ? styles.minimized : '', className].filter(Boolean).join(' ')}
       style={{ height: isMinimized ? undefined : height, ...style }}
+      data-juneau="sidebar"
     >
       <AiChatHeader
         title={title}

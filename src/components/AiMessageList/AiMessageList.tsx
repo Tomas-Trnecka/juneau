@@ -36,10 +36,10 @@ export function AiMessageList({ messages, isLoading, isConnecting, onProposalCon
   }, [messages, isLoading]);
 
   return (
-    <div className={styles.list}>
+    <div className={styles.list} data-juneau="message-list">
       {messages.length === 0 &&
         (emptyState ?? (
-          <div className={styles.empty}>
+          <div className={styles.empty} data-juneau="empty-state">
             <p>{labels.emptyStateText}</p>
             <p className={styles.hint}>
               <em>{labels.emptyStateHint}</em>

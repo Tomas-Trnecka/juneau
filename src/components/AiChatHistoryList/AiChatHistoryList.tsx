@@ -21,7 +21,7 @@ export function AiChatHistoryList({ chats, onSelect, activeChatId, onDelete }: P
   }
 
   return (
-    <ul className={styles.list}>
+    <ul className={styles.list} data-juneau="history-list">
       {chats.map(chat => (
         <li key={chat.id} className={styles.item}>
           <button

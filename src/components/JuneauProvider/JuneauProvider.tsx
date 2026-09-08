@@ -27,11 +27,31 @@ export type JuneauTheme = {
   colorTextFaint?: string;
   colorTextInverse?: string;
   colorAssistantAvatar?: string;
+  colorErrorBg?: string;
+  colorErrorBorder?: string;
+  colorErrorText?: string;
+  colorSuccessBg?: string;
+  colorSuccessText?: string;
+  colorWarningBg?: string;
+  colorWarningText?: string;
+  colorDangerBg?: string;
+  colorDangerText?: string;
   radiusSm?: string;
   radiusMd?: string;
   radiusLg?: string;
+  radiusFull?: string;
+  fontSizeXs?: string;
+  fontSizeSm?: string;
+  fontSizeBase?: string;
+  fontSizeMd?: string;
+  fontSizeLg?: string;
+  fontSizeXl?: string;
+  fontSize2xl?: string;
+  fontSize3xl?: string;
   /** Override the font family used across all Juneau components. */
   fontFamily?: string;
+  /** Duration for all transitions, e.g. '0.2s'. */
+  transitionFast?: string;
 };
 
 type Props = {
@@ -99,10 +119,29 @@ function buildThemeVars(theme: JuneauTheme): CSSProperties {
     '--juneau-color-text-faint':       theme.colorTextFaint,
     '--juneau-color-text-inverse':     theme.colorTextInverse,
     '--juneau-color-assistant-avatar': theme.colorAssistantAvatar,
+    '--juneau-color-error-bg':         theme.colorErrorBg,
+    '--juneau-color-error-border':     theme.colorErrorBorder,
+    '--juneau-color-error-text':       theme.colorErrorText,
+    '--juneau-color-success-bg':       theme.colorSuccessBg,
+    '--juneau-color-success-text':     theme.colorSuccessText,
+    '--juneau-color-warning-bg':       theme.colorWarningBg,
+    '--juneau-color-warning-text':     theme.colorWarningText,
+    '--juneau-color-danger-bg':        theme.colorDangerBg,
+    '--juneau-color-danger-text':      theme.colorDangerText,
     '--juneau-radius-sm':              theme.radiusSm,
     '--juneau-radius-md':              theme.radiusMd,
     '--juneau-radius-lg':              theme.radiusLg,
+    '--juneau-radius-full':            theme.radiusFull,
+    '--juneau-font-size-xs':           theme.fontSizeXs,
+    '--juneau-font-size-sm':           theme.fontSizeSm,
+    '--juneau-font-size-base':         theme.fontSizeBase,
+    '--juneau-font-size-md':           theme.fontSizeMd,
+    '--juneau-font-size-lg':           theme.fontSizeLg,
+    '--juneau-font-size-xl':           theme.fontSizeXl,
+    '--juneau-font-size-2xl':          theme.fontSize2xl,
+    '--juneau-font-size-3xl':          theme.fontSize3xl,
     '--juneau-font-family':            theme.fontFamily,
+    '--juneau-transition-fast':        theme.transitionFast,
   };
 
   return Object.fromEntries(

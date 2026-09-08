@@ -7,7 +7,7 @@ type Props = {
 
 export function AiTablePart({ part }: Props) {
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} data-juneau="table-part">
       <table className={styles.table}>
         <thead>
           <tr>

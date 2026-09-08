@@ -954,23 +954,79 @@ Only keys you specify are overridden — everything else keeps its default. Over
 | `colorPrimary` | `--juneau-color-primary` | `#000000` | Send button, user bubble |
 | `colorPrimaryDark` | `--juneau-color-primary-dark` | `#252528` | Primary hover state |
 | `colorPrimaryLight` | `--juneau-color-primary-light` | `#ECECEC` | Primary tinted backgrounds |
+| `colorPrimaryBorder` | `--juneau-color-primary-border` | `#E8E8EC` | Primary tinted borders |
 | `colorAccent` | `--juneau-color-accent` | `#FF49A4` | Header bg, proposal confirm, avatar |
 | `colorAccentDark` | `--juneau-color-accent-dark` | `#FF6BB3` | Accent hover |
 | `colorAccentLight` | `--juneau-color-accent-light` | `#FFF0F7` | Proposal card background |
+| `colorAccentBorder` | `--juneau-color-accent-border` | `#FFBDD9` | Proposal card border |
 | `colorSurface` | `--juneau-color-surface` | `#FFFFFF` | Cards, sidebar, input background |
 | `colorSurfaceRaised` | `--juneau-color-surface-raised` | `#F4F4F6` | Page background, table headers |
 | `colorSurfaceHover` | `--juneau-color-surface-hover` | `#ECECEC` | Row hover |
 | `colorBorder` | `--juneau-color-border` | `#E8E8EC` | Default borders |
+| `colorBorderSubtle` | `--juneau-color-border-subtle` | `#ECECEC` | Table row dividers |
 | `colorTextPrimary` | `--juneau-color-text-primary` | `#000000` | Main body text |
 | `colorTextSecondary` | `--juneau-color-text-secondary` | `#474747` | Supporting text |
 | `colorTextMuted` | `--juneau-color-text-muted` | `#474747` | Labels, hints |
 | `colorTextFaint` | `--juneau-color-text-faint` | `#9090A0` | Empty states |
 | `colorTextInverse` | `--juneau-color-text-inverse` | `#FFFFFF` | Text on dark backgrounds |
 | `colorAssistantAvatar` | `--juneau-color-assistant-avatar` | `#FF49A4` | Assistant avatar circle |
+| `colorErrorBg` | `--juneau-color-error-bg` | `#FFF0F7` | Error banner background |
+| `colorErrorBorder` | `--juneau-color-error-border` | `#E6244A` | Error banner border |
+| `colorErrorText` | `--juneau-color-error-text` | `#C41A3B` | Error text |
+| `colorSuccessBg` | `--juneau-color-success-bg` | `#F4FDE8` | Success badge background |
+| `colorSuccessText` | `--juneau-color-success-text` | `#3F7528` | Success badge text |
+| `colorWarningBg` | `--juneau-color-warning-bg` | `#FFF6E5` | Warning badge background |
+| `colorWarningText` | `--juneau-color-warning-text` | `#B37400` | Warning badge text |
+| `colorDangerBg` | `--juneau-color-danger-bg` | `#FFF0F7` | Danger badge background |
+| `colorDangerText` | `--juneau-color-danger-text` | `#C41A3B` | Danger badge text |
 | `radiusSm` | `--juneau-radius-sm` | `6px` | Buttons, small elements |
 | `radiusMd` | `--juneau-radius-md` | `8px` | Inputs, cards |
 | `radiusLg` | `--juneau-radius-lg` | `12px` | Panels, large cards |
+| `radiusFull` | `--juneau-radius-full` | `9999px` | Pills, avatars, dots |
+| `fontSizeXs` | `--juneau-font-size-xs` | `11px` | Badges |
+| `fontSizeSm` | `--juneau-font-size-sm` | `12px` | Labels, captions |
+| `fontSizeBase` | `--juneau-font-size-base` | `13px` | Default body, action buttons |
+| `fontSizeMd` | `--juneau-font-size-md` | `14px` | Chat bubbles |
+| `fontSizeLg` | `--juneau-font-size-lg` | `15px` | Section headings |
+| `fontSizeXl` | `--juneau-font-size-xl` | `16px` | App title |
+| `fontSize2xl` | `--juneau-font-size-2xl` | `22px` | KPI values |
+| `fontSize3xl` | `--juneau-font-size-3xl` | `24px` | Page titles |
 | `fontFamily` | `--juneau-font-family` | system-ui | Font used across all components |
+| `transitionFast` | `--juneau-transition-fast` | `0.15s` | All transitions |
+
+### Styling hooks (`data-juneau` attributes)
+
+Beyond tokens, key elements carry stable `data-juneau` attributes so you can target them with plain CSS — internal class names are hashed and must not be relied on.
+
+```css
+/* Example: wider bubbles and a custom user bubble background */
+[data-juneau='message'][data-juneau-role='user'] [data-juneau-segment='bubble'] {
+  background: rebeccapurple;
+}
+[data-juneau='input-textarea'] {
+  min-height: 80px;
+}
+```
+
+| Attribute | Element |
+|---|---|
+| `data-juneau="sidebar"` | `AiSidebar` root `<aside>` |
+| `data-juneau="chat"` | `AiChat` root |
+| `data-juneau="header"` | `AiChatHeader` root |
+| `data-juneau="message-list"` | `AiMessageList` root |
+| `data-juneau="empty-state"` | Default empty state in `AiMessageList` |
+| `data-juneau="message"` + `data-juneau-role="user\|assistant"` | Each message row |
+| `data-juneau-segment="bubble\|card"` | Bubble / card segment inside a message |
+| `data-juneau="typing-indicator"` | Typing indicator |
+| `data-juneau="input"` | `AiInput` wrapper |
+| `data-juneau="input-textarea"` | `AiInput` textarea |
+| `data-juneau="error"` | `AiError` banner |
+| `data-juneau="history-list"` | `AiChatHistoryList` root |
+| `data-juneau="table-part"` | Table part wrapper |
+| `data-juneau="entity-card"` | Entity card (static and clickable) |
+| `data-juneau="entity-list-part"` | Entity list part wrapper |
+| `data-juneau="proposal-card"` | Proposal card |
+| `data-juneau="activity-part"` | Activity part (also has `data-status`) |
 
 ---
 

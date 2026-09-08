@@ -80,6 +80,7 @@ export function AiChat({
     <div
       className={[styles.chat, className].filter(Boolean).join(' ')}
       style={style}
+      data-juneau="chat"
     >
       <AiMessageList
         messages={messages}

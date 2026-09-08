@@ -64,7 +64,11 @@ export function AiMessageBubble({ message, onProposalConfirm, onProposalCancel, 
   const hasCard = message.parts.some(isCardPart);
 
   return (
-    <div className={`${styles.wrapper} ${isUser ? styles.user : styles.assistant}`}>
+    <div
+      className={`${styles.wrapper} ${isUser ? styles.user : styles.assistant}`}
+      data-juneau="message"
+      data-juneau-role={message.role}
+    >
       {!isUser && (
         <div className={styles.avatar} aria-hidden="true">
           {assistantIcon ?? <IconWandMagicSparkles />}

@@ -73,10 +73,11 @@ export function AiInput({ value, onChange, onSend, onStop, isLoading, placeholde
   };
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} data-juneau="input">
       <textarea
         ref={textareaRef}
         className={styles.textarea}
+        data-juneau="input-textarea"
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
