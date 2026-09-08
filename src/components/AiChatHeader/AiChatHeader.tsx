@@ -1,5 +1,10 @@
 import type { ReactNode } from 'react';
-import { IconWandMagicSparkles, IconWindowMinimize, IconWindowRestore } from '../icons';
+import {
+  IconArrowRotateLeft,
+  IconWandMagicSparkles,
+  IconWindowMinimize,
+  IconWindowRestore,
+} from '../icons';
 import { useLabels } from '../../i18n/context';
 import styles from './AiChatHeader.module.css';
 
@@ -45,8 +50,9 @@ export function AiChatHeader({
               onClick={onReset}
               title={labels.resetConversation}
               aria-label={labels.resetConversation}
+              data-juneau="header-reset"
             >
-              ↺
+              <IconArrowRotateLeft />
             </button>
           )}
           {onMinimize && (
@@ -55,6 +61,7 @@ export function AiChatHeader({
               onClick={onMinimize}
               title={isMinimized ? labels.expandSidebar : labels.minimizeSidebar}
               aria-label={isMinimized ? labels.expandSidebar : labels.minimizeSidebar}
+              data-juneau="header-minimize"
             >
               {isMinimized ? <IconWindowRestore /> : <IconWindowMinimize />}
             </button>
