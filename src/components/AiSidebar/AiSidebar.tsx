@@ -34,6 +34,11 @@ type Props = {
    */
   onReset?: () => void;
   /**
+   * Gate asked before the conversation is cleared. Resolve false to abort —
+   * nothing is reset and `onReset` never fires. Use it for a confirm dialog.
+   */
+  confirmReset?: () => boolean | Promise<boolean>;
+  /**
    * Custom part renderer — called before the built-in renderers for every
    * message part. Return a ReactNode to render it, or null/undefined to fall
    * through to the built-ins. Enables custom part types like invoice cards.
@@ -62,6 +67,7 @@ export function AiSidebar({
   className,
   style,
   onReset,
+  confirmReset,
   renderPart,
   onEntityClick,
   headerActions,
@@ -83,8 +89,13 @@ export function AiSidebar({
     cancelProposal,
   } = useAiChatContext();
 
+  // The gate runs before the wipe, so a declined confirm leaves the chat untouched.
   const handleReset = onReset
-    ? () => { reset(); onReset(); }
+    ? async () => {
+        if (confirmReset && !(await confirmReset())) return;
+        reset();
+        onReset();
+      }
     : undefined;
 
   return (
