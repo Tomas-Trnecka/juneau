@@ -20,10 +20,11 @@
   color: var(--juneau-color-accent);
 }
 
+/* Base accent, not the -dark hover shade — this is resting heading text. */
 .title {
   font-weight: 600;
   font-size: var(--juneau-font-size-md);
-  color: var(--juneau-color-accent-dark);
+  color: var(--juneau-color-accent);
 }
 
 .description {
