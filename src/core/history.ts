@@ -1,4 +1,5 @@
 import type {
+  AiChartPart,
   AiChatSummary,
   AiMessage,
   AiMessagePart,
@@ -12,6 +13,14 @@ import type {
  */
 export function isProposalPart(part: AiMessagePart): part is AiProposalPart {
   return part.type === 'proposal';
+}
+
+/**
+ * Narrows a part to a chart. Checks structure, not just `type` — chart parts
+ * may be restored from persisted history written by older consumers.
+ */
+export function isChartPart(part: AiMessagePart): part is AiChartPart {
+  return part.type === 'chart' && Array.isArray((part as AiChartPart).series);
 }
 
 /**

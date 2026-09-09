@@ -99,6 +99,40 @@ export type AiActivityPart = {
   metadata?: Record<string, unknown>;
 };
 
+/** How chart y-values should be formatted by the renderer */
+export type AiChartValueFormat = 'currency' | 'count';
+
+/** One data point — `y` is a string so decimal amounts survive the wire losslessly */
+export type AiChartPoint = {
+  x: string;
+  y: string;
+};
+
+/**
+ * One chart series. Series are the unit of visual separation — consumers
+ * should never sum values across series (e.g. different currencies).
+ */
+export type AiChartSeries = {
+  label: string;
+  /** ISO 4217 code when the series carries monetary values */
+  currency?: string;
+  points: AiChartPoint[];
+};
+
+/**
+ * A renderable chart. Juneau owns the schema; the consumer owns the pixels —
+ * provide a renderer via `renderPart` (Juneau ships no built-in chart renderer).
+ */
+export type AiChartPart = {
+  type: 'chart';
+  kind: 'bar' | 'line' | 'pie';
+  /** Optional heading above the chart */
+  title?: string;
+  series: AiChartSeries[];
+  /** Hint for the renderer's axis/tooltip formatting */
+  yFormat?: AiChartValueFormat;
+};
+
 /**
  * Escape hatch for consumer-defined part types. Any part shape with a `type`
  * string that isn't one of the built-ins flows through the wire protocol and
@@ -115,6 +149,7 @@ export type AiMessagePart =
   | AiErrorPart
   | AiEntityPart
   | AiEntityListPart
+  | AiChartPart
   | AiCustomPart;
 
 export type AiMessage = {
@@ -149,7 +184,7 @@ export type AiChatSummary = {
 export type AiSerializedMessage = Omit<AiMessage, 'createdAt'> & { createdAt: string; v?: number };
 
 export type AiStreamTextEvent = { type: 'text'; text: string };
-export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart | AiEntityPart | AiEntityListPart | AiCustomPart };
+export type AiStreamPartEvent = { type: 'part'; part: AiTablePart | AiProposalPart | AiActivityPart | AiErrorPart | AiEntityPart | AiEntityListPart | AiChartPart | AiCustomPart };
 export type AiStreamDoneEvent = { type: 'done' };
 export type AiStreamErrorEvent = { type: 'error'; message: string };
 
@@ -204,10 +239,10 @@ export type JuneauWireActivity = {
   metadata?: Record<string, unknown>;
 };
 
-/** Structured rich block — table, proposal, entity, entity list, or any consumer-defined custom part */
+/** Structured rich block — table, proposal, entity, entity list, chart, or any consumer-defined custom part */
 export type JuneauWirePart = {
   type: 'part';
-  part: AiTablePart | AiProposalPart | AiEntityPart | AiEntityListPart | AiCustomPart;
+  part: AiTablePart | AiProposalPart | AiEntityPart | AiEntityListPart | AiChartPart | AiCustomPart;
 };
 
 /** Stream finished cleanly */

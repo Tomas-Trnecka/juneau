@@ -19,6 +19,10 @@ export type {
   AiEntityBadgeTone,
   AiEntityPart as AiEntityPartType,
   AiEntityListPart as AiEntityListPartType,
+  AiChartPart,
+  AiChartSeries,
+  AiChartPoint,
+  AiChartValueFormat,
   AiBackendAdapter,
   AiAdapterInput,
   AiStreamEvent,
@@ -36,7 +40,7 @@ export type {
 } from './core/types';
 
 export { consumeStream, delay, getMessageText, serializeMessages } from './core/stream';
-export { serializeForStorage, deserializeMessages, trimHistory, trimChats, isProposalPart } from './core/history';
+export { serializeForStorage, deserializeMessages, trimHistory, trimChats, isProposalPart, isChartPart } from './core/history';
 
 // ─── Adapters ─────────────────────────────────────────────────────────────────
 export { mockAdapter } from './adapters/mockAdapter';
