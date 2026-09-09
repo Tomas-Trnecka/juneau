@@ -53,4 +53,11 @@
   gap: 2px;
 }
 
+/* Badge slot — the consumer owns the visual, this only keeps it inline with the title. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 

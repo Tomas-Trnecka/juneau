@@ -54,6 +54,18 @@ type Props = {
    */
   headerActions?: ReactNode;
   /**
+   * Rendered right of the header title. Use it for an unread/notification badge.
+   * Juneau renders it as given and never interprets it.
+   */
+  badge?: ReactNode;
+  /**
+   * Collapsed state. Omit to let the sidebar own it; pass a value to control it
+   * (e.g. to persist the choice) and keep it in sync via `onMinimizedChange`.
+   */
+  minimized?: boolean;
+  /** Fires whenever the user toggles the collapsed state, controlled or not. */
+  onMinimizedChange?: (minimized: boolean) => void;
+  /**
    * Rendered instead of the default empty-state text when there are no messages.
    * Use it for a rich "get started" hero — headline, suggestion chips, anything.
    */
@@ -74,9 +86,21 @@ export function AiSidebar({
   renderPart,
   onEntityClick,
   headerActions,
+  badge,
+  minimized,
+  onMinimizedChange,
   emptyState,
 }: Props) {
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [uncontrolledMinimized, setUncontrolledMinimized] = useState(false);
+  // Controlled when `minimized` is supplied; otherwise the sidebar keeps owning the state.
+  const isControlled = minimized !== undefined;
+  const isMinimized = isControlled ? minimized : uncontrolledMinimized;
+
+  const toggleMinimized = (): void => {
+    const next = !isMinimized;
+    if (!isControlled) setUncontrolledMinimized(next);
+    onMinimizedChange?.(next);
+  };
 
   const {
     messages,
@@ -110,9 +134,10 @@ export function AiSidebar({
       <AiChatHeader
         title={title}
         icon={icon}
-        onMinimize={() => setIsMinimized(v => !v)}
+        onMinimize={toggleMinimized}
         isMinimized={isMinimized}
         onReset={handleReset}
+        badge={badge}
         headerActions={headerActions}
       />
 

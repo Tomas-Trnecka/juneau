@@ -17,6 +17,11 @@ type Props = {
   /** Called when the reset button is clicked. When provided, a reset button is shown. */
   onReset?: () => void;
   /**
+   * Rendered right of the title. Use it for an unread/notification badge.
+   * Juneau renders it as given and never interprets it.
+   */
+  badge?: ReactNode;
+  /**
    * Extra controls rendered left of the built-in reset/minimize buttons.
    * Juneau renders them as given and never interprets them — the consumer owns their behaviour.
    */
@@ -29,6 +34,7 @@ export function AiChatHeader({
   isMinimized,
   icon,
   onReset,
+  badge,
   headerActions,
 }: Props) {
   const labels = useLabels();
@@ -40,6 +46,11 @@ export function AiChatHeader({
           {icon ?? <IconWandMagicSparkles />}
         </span>
         <span className={styles.title}>{title ?? labels.sidebarTitle}</span>
+        {badge && (
+          <span className={styles.badge} data-juneau="header-badge">
+            {badge}
+          </span>
+        )}
       </div>
       {(onMinimize || onReset || headerActions) && (
         <div className={styles.actions}>
