@@ -13,6 +13,8 @@ type Props = {
   title?: string;
   /** Override the header and assistant avatar icon. Defaults to a wand icon. */
   icon?: ReactNode;
+  /** Override only the message avatar. Falls back to `icon` when omitted. */
+  assistantIcon?: ReactNode;
   /**
    * Toolbar action buttons rendered left of the send button.
    * Pass an empty array to hide the toolbar entirely.
@@ -61,6 +63,7 @@ type Props = {
 export function AiSidebar({
   title,
   icon,
+  assistantIcon,
   actions,
   sendIcon,
   height = '60vh',
@@ -125,7 +128,7 @@ export function AiSidebar({
           onStop={stop}
           onProposalConfirm={confirmProposal}
           onProposalCancel={cancelProposal}
-          assistantIcon={icon}
+          assistantIcon={assistantIcon ?? icon}
           actions={actions}
           sendIcon={sendIcon}
           renderPart={renderPart}
