@@ -70,7 +70,7 @@ export function AiMessageBubble({ message, onProposalConfirm, onProposalCancel, 
       data-juneau-role={message.role}
     >
       {!isUser && (
-        <div className={styles.avatar} aria-hidden="true">
+        <div className={styles.avatar} aria-hidden="true" data-juneau="assistant-avatar">
           {assistantIcon ?? <IconWandMagicSparkles />}
         </div>
       )}
