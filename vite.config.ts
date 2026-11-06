@@ -35,8 +35,15 @@ export default defineConfig(({ command, mode }) => {
               formats: ['es', 'cjs'],
             },
             rollupOptions: {
-              // React must never be bundled — consumer provides it
-              external: ['react', 'react/jsx-runtime', 'react-dom', 'zod'],
+              // React must never be bundled — consumer provides it.
+              // Runtime dependencies stay external so a consumer that also uses them ships one copy.
+              external: [
+                'react',
+                'react/jsx-runtime',
+                'react-dom',
+                'zod',
+                /^(react-markdown|remark-gfm)(\/|$)/,
+              ],
               output: {
                 globals: {
                   react: 'React',
