@@ -89,6 +89,19 @@ export const CustomTitle: Story = {
   },
 };
 
+export const AboveInputSlot: Story = {
+  args: {
+    aboveInput: <p>Was this conversation helpful?</p>,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: '`aboveInput` renders consumer content directly above the input — forwarded to `AiChat` and hidden while minimized.',
+      },
+    },
+  },
+};
+
 export const WithApplicationContext: Story = {
   name: 'With Application Context',
   decorators: [

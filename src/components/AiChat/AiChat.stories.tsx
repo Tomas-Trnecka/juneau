@@ -146,6 +146,20 @@ export const WithError: Story = {
   },
 };
 
+export const AboveInputSlot: Story = {
+  args: {
+    ...emptyState,
+    aboveInput: <p>Was this conversation helpful?</p>,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: '`aboveInput` renders consumer content between the message list / error banner and the input. Omit it and no wrapper is rendered.',
+      },
+    },
+  },
+};
+
 // Live story — calls useAiChat internally via a render wrapper
 export const LiveWithMockAdapter: Story = {
   name: 'Live — mockAdapter',

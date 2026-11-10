@@ -38,12 +38,13 @@ Returns: `messages`, `input`, `setInput`, `sendMessage`, `sendMessageWithText`, 
 
 ### AiSidebar
 Fixed-position overlay panel, bottom-right, reads from AiChatProvider.
-Props: `title?`, `icon?`, `actions?`, `sendIcon?`, `height?` (default: '60vh'), `onReset?`, `renderPart?`, `onEntityClick?`, `className?`, `style?`
+Props: `title?`, `icon?`, `actions?`, `sendIcon?`, `height?` (default: '60vh'), `onReset?`, `renderPart?`, `onEntityClick?`, `aboveInput?`, `className?`, `style?`
 Has minimize/restore button. Minimized = compact header bar at bottom-right. Animated transition.
 
 ### AiChat
 Headless chat body (message list + input + error). Requires explicit props from useAiChat.
 Use when embedding chat in a custom layout instead of using AiSidebar. Also accepts `renderPart?` and `onEntityClick?`.
+`aboveInput?: ReactNode` renders consumer content between the message list / error and the input, wrapped in `[data-juneau="above-input"][data-juneau-above-input]`. Omitted or null = nothing rendered, no wrapper. AiSidebar forwards the same prop (hidden while minimized).
 
 ### renderPart — custom part renderer escape hatch
 `RenderPartFn = (part: AiMessagePart) => ReactNode | null | undefined`

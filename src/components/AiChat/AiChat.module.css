@@ -4,3 +4,9 @@
   height: 100%;
   overflow: hidden;
 }
+
+.aboveInput {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+}

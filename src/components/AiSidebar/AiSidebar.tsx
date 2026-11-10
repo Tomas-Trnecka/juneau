@@ -70,6 +70,11 @@ type Props = {
    * Use it for a rich "get started" hero — headline, suggestion chips, anything.
    */
   emptyState?: ReactNode;
+  /**
+   * Consumer content rendered directly above the input, e.g. a feedback prompt.
+   * Forwarded to `AiChat`; hidden together with the chat body while minimized.
+   */
+  aboveInput?: ReactNode;
 };
 
 export function AiSidebar({
@@ -90,6 +95,7 @@ export function AiSidebar({
   minimized,
   onMinimizedChange,
   emptyState,
+  aboveInput,
 }: Props) {
   const [uncontrolledMinimized, setUncontrolledMinimized] = useState(false);
   // Controlled when `minimized` is supplied; otherwise the sidebar keeps owning the state.
@@ -159,6 +165,7 @@ export function AiSidebar({
           renderPart={renderPart}
           onEntityClick={onEntityClick}
           emptyState={emptyState}
+          aboveInput={aboveInput}
         />
       )}
     </aside>

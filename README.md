@@ -516,6 +516,7 @@ The sidebar anchors to the bottom-right of the viewport and opens at 60% screen 
 | `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
 | `onEntityClick` | `(entity, entityType?) => void` | Makes entity cards clickable — e.g. navigate to the record. |
 | `headerActions` | `ReactNode` | Extra controls in the header, left of reset/minimize. Rendered as given — Juneau never interprets them. |
+| `aboveInput` | `ReactNode` | Content rendered directly above the input (e.g. a feedback prompt). Forwarded to `AiChat`; hidden while minimized. |
 
 **Header chrome (`headerActions`):**
 
@@ -581,6 +582,19 @@ function MyPage() {
 | `placeholder` | `string` | Input placeholder text. |
 | `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
 | `onEntityClick` | `(entity, entityType?) => void` | Makes entity cards clickable — e.g. navigate to the record. |
+| `aboveInput` | `ReactNode` | Content rendered between the messages / error banner and the input. See below. |
+
+**Slot above the input (`aboveInput`):**
+
+Renders consumer content — a feedback prompt, a notice, anything — between the message list (and error banner) and the input. The wrapper carries `data-juneau="above-input"` and `data-juneau-above-input`, never shrinks, and spans the full width; the message list keeps scrolling and the input stays at the bottom. When the prop is `undefined` or `null`, nothing is rendered — not even the wrapper.
+
+```tsx
+<AiSidebar
+  aboveInput={
+    <MyFeedbackPrompt onSubmit={sendFeedback} />
+  }
+/>
+```
 
 ---
 
@@ -1018,6 +1032,7 @@ Beyond tokens, key elements carry stable `data-juneau` attributes so you can tar
 | `data-juneau="message"` + `data-juneau-role="user\|assistant"` | Each message row |
 | `data-juneau-segment="bubble\|card"` | Bubble / card segment inside a message |
 | `data-juneau="typing-indicator"` | Typing indicator |
+| `data-juneau="above-input"` (also `data-juneau-above-input`) | `aboveInput` slot wrapper in `AiChat` — only rendered when the prop is set |
 | `data-juneau="input"` | `AiInput` wrapper |
 | `data-juneau="input-textarea"` | `AiInput` textarea |
 | `data-juneau="error"` | `AiError` banner |

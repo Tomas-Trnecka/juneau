@@ -43,6 +43,12 @@ type Props = {
    * Use it for a rich "get started" hero — headline, suggestion chips, anything.
    */
   emptyState?: ReactNode;
+  /**
+   * Consumer content rendered between the message list / error banner and the
+   * input, e.g. a feedback prompt. When omitted nothing renders — not even the
+   * wrapper — so the default layout is unaffected.
+   */
+  aboveInput?: ReactNode;
   className?: string;
   style?: CSSProperties;
 };
@@ -73,6 +79,7 @@ export function AiChat({
   sendIcon,
   renderPart,
   emptyState,
+  aboveInput,
   className,
   style,
 }: Props) {
@@ -95,6 +102,12 @@ export function AiChat({
       />
 
       {error && <AiError message={error} />}
+
+      {aboveInput != null && (
+        <div className={styles.aboveInput} data-juneau="above-input" data-juneau-above-input="">
+          {aboveInput}
+        </div>
+      )}
 
       <AiInput
         value={input}

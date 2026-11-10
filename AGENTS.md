@@ -79,6 +79,8 @@ src/
 
 `AiChatHeader` is the shared header used by both `AiSidebar` and any custom layout (e.g. `DashboardView`). It reads `sidebarTitle` and `clearConversation` from `useLabels()` — change it once, both layouts update.
 
+Both accept `aboveInput?: ReactNode` — a slot rendered between `AiMessageList`/`AiError` and `AiInput` inside a `data-juneau="above-input"` wrapper (`flex-shrink: 0`, full width). Omitted/null renders nothing, not even the wrapper. `AiSidebar` just forwards it, so it disappears with the chat body when minimized.
+
 Use `AiChat` directly when you want chat embedded in your own layout (dashboard card, modal, full-page). Use `AiSidebar` when you want the pre-built panel.
 
 ---

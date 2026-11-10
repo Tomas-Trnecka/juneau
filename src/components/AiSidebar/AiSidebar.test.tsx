@@ -66,6 +66,18 @@ describe('AiSidebar — badge slot', () => {
     expect(document.querySelector("[data-juneau='header-badge']")).toBeNull();
   });
 
+  it('forwards aboveInput into the chat body', () => {
+    withProvider(<AiSidebar aboveInput={<span>Feedback</span>} />);
+
+    expect(document.querySelector('[data-juneau-above-input]')?.textContent).toBe('Feedback');
+  });
+
+  it('hides aboveInput while collapsed', () => {
+    withProvider(<AiSidebar minimized aboveInput={<span>Feedback</span>} />);
+
+    expect(document.querySelector('[data-juneau-above-input]')).toBeNull();
+  });
+
   // The badge must survive collapsing — that is the whole point of it.
   it('keeps the badge visible while collapsed', () => {
     withProvider(<AiSidebar minimized badge={<span>1</span>} />);
