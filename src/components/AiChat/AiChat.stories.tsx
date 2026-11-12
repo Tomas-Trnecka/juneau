@@ -160,6 +160,40 @@ export const AboveInputSlot: Story = {
   },
 };
 
+export const CenteredWhenEmpty: Story = {
+  name: 'Centred empty layout (live)',
+  parameters: {
+    docs: {
+      description: {
+        story: '`centerInputWhenEmpty` centres the empty state and the input while the chat is empty, with `belowInput` under it. Send a message and the input moves to the bottom.',
+      },
+    },
+  },
+  render: function Render() {
+    const chat = useAiChat({ adapter: mockAdapter });
+    return (
+      <AiChat
+        messages={chat.messages}
+        input={chat.input}
+        isLoading={chat.isLoading}
+        isConnecting={chat.isConnecting}
+        error={chat.error}
+        onInputChange={chat.setInput}
+        onSend={chat.sendMessage}
+        onProposalConfirm={chat.confirmProposal}
+        onProposalCancel={chat.cancelProposal}
+        centerInputWhenEmpty
+        emptyState={<h2 style={{ margin: 0, textAlign: 'center' }}>What can I help with?</h2>}
+        belowInput={
+          <button type="button" onClick={() => void chat.sendMessageWithText('Show me monthly spend trend')}>
+            Show me monthly spend trend
+          </button>
+        }
+      />
+    );
+  },
+};
+
 // Live story — calls useAiChat internally via a render wrapper
 export const LiveWithMockAdapter: Story = {
   name: 'Live — mockAdapter',

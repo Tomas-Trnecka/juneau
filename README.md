@@ -583,6 +583,16 @@ function MyPage() {
 | `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
 | `onEntityClick` | `(entity, entityType?) => void` | Makes entity cards clickable — e.g. navigate to the record. |
 | `aboveInput` | `ReactNode` | Content rendered between the messages / error banner and the input. See below. |
+| `centerInputWhenEmpty` | `boolean` | While there are no messages, centre the empty state and the input instead of pinning the input to the bottom. See below. |
+| `belowInput` | `ReactNode` | Content below the input in the centred empty layout (e.g. suggestions). Not rendered otherwise. |
+
+**Centred empty layout (`centerInputWhenEmpty`, `belowInput`):**
+
+A start page in the style of a search box: while the conversation is empty, the `emptyState`, the error banner, the `aboveInput` slot, the input and `belowInput` stack in one column centred in `[data-juneau="chat-start"]`, which scrolls as a whole when it outgrows the chat. The first message switches to the default layout — messages above, input at the bottom — and `belowInput` is no longer rendered.
+
+```tsx
+<AiChat {...chatProps} centerInputWhenEmpty emptyState={<Hero />} belowInput={<Suggestions />} />
+```
 
 **Slot above the input (`aboveInput`):**
 
@@ -1033,6 +1043,8 @@ Beyond tokens, key elements carry stable `data-juneau` attributes so you can tar
 | `data-juneau-segment="bubble\|card"` | Bubble / card segment inside a message |
 | `data-juneau="typing-indicator"` | Typing indicator |
 | `data-juneau="above-input"` (also `data-juneau-above-input`) | `aboveInput` slot wrapper in `AiChat` — only rendered when the prop is set |
+| `data-juneau="chat-start"` | Scroll container of the centred empty layout in `AiChat` (`centerInputWhenEmpty`, no messages) |
+| `data-juneau="below-input"` | `belowInput` slot wrapper in the centred empty layout |
 | `data-juneau="input"` | `AiInput` wrapper |
 | `data-juneau="input-textarea"` | `AiInput` textarea |
 | `data-juneau="error"` | `AiError` banner |

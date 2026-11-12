@@ -55,3 +55,49 @@ describe('AiChat — aboveInput slot', () => {
     expect(slot()).toBeNull();
   });
 });
+
+describe('AiChat — centred empty layout', () => {
+  const centred = { ...baseProps, messages: [], centerInputWhenEmpty: true };
+  const startChildren = (): (string | null)[] =>
+    Array.from(document.querySelector("[data-juneau='chat-start']")?.firstElementChild?.children ?? []).map(el =>
+      el.getAttribute('data-juneau')
+    );
+
+  it('stacks the empty state, the input and the content below it while there are no messages', () => {
+    render(
+      <AiChat
+        {...centred}
+        emptyState={<div data-juneau='hero'>Hi</div>}
+        belowInput={<span>Ideas</span>}
+      />
+    );
+
+    expect(startChildren()).toEqual(['hero', 'input', 'below-input']);
+    expect(document.querySelector("[data-juneau='message-list']")).toBeNull();
+  });
+
+  it('keeps the error and the slot above the input in the centred column', () => {
+    render(<AiChat {...centred} error='Oops' aboveInput={<span>Notice</span>} emptyState={<p />} />);
+
+    expect(startChildren()).toEqual([null, 'error', 'above-input', 'input']);
+  });
+
+  it('falls back to the default empty state when none is given', () => {
+    render(<AiChat {...centred} />);
+
+    expect(document.querySelector("[data-juneau='empty-state']")).not.toBeNull();
+  });
+
+  it('pins the input to the bottom and drops the content below it once there are messages', () => {
+    render(<AiChat {...baseProps} centerInputWhenEmpty belowInput={<span>Ideas</span>} />);
+
+    expect(chatChildren()).toEqual(['message-list', 'input']);
+    expect(document.querySelector("[data-juneau='below-input']")).toBeNull();
+  });
+
+  it('keeps the default layout for an empty chat without the option', () => {
+    render(<AiChat {...baseProps} messages={[]} belowInput={<span>Ideas</span>} />);
+
+    expect(chatChildren()).toEqual(['message-list', 'input']);
+  });
+});

@@ -81,6 +81,8 @@ src/
 
 Both accept `aboveInput?: ReactNode` — a slot rendered between `AiMessageList`/`AiError` and `AiInput` inside a `data-juneau="above-input"` wrapper (`flex-shrink: 0`, full width). Omitted/null renders nothing, not even the wrapper. `AiSidebar` just forwards it, so it disappears with the chat body when minimized.
 
+`AiChat` also accepts `centerInputWhenEmpty?: boolean` and `belowInput?: ReactNode`: with no messages, the empty state, error, `aboveInput`, input and `belowInput` stack in one centred column (`data-juneau="chat-start"`, `data-juneau="below-input"`); the first message restores the default layout and drops `belowInput`.
+
 Use `AiChat` directly when you want chat embedded in your own layout (dashboard card, modal, full-page). Use `AiSidebar` when you want the pre-built panel.
 
 ---

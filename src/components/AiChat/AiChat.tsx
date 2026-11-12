@@ -49,6 +49,14 @@ type Props = {
    * wrapper — so the default layout is unaffected.
    */
   aboveInput?: ReactNode;
+  /**
+   * While there are no messages, centre the empty state and the input in the
+   * chat instead of pinning the input to the bottom. The first message restores
+   * the default layout.
+   */
+  centerInputWhenEmpty?: boolean;
+  /** Content below the input in the centred empty layout, e.g. suggestions. */
+  belowInput?: ReactNode;
   className?: string;
   style?: CSSProperties;
 };
@@ -80,9 +88,62 @@ export function AiChat({
   renderPart,
   emptyState,
   aboveInput,
+  centerInputWhenEmpty = false,
+  belowInput,
   className,
   style,
 }: Props) {
+  const errorBanner = error && <AiError message={error} />;
+  const aboveInputSlot = aboveInput != null && (
+    <div className={styles.aboveInput} data-juneau="above-input" data-juneau-above-input="">
+      {aboveInput}
+    </div>
+  );
+  const inputBar = (
+    <AiInput
+      value={input}
+      onChange={onInputChange}
+      onSend={onSend}
+      onStop={onStop}
+      isLoading={isLoading}
+      placeholder={placeholder}
+      actions={actions}
+      sendIcon={sendIcon}
+    />
+  );
+
+  if (centerInputWhenEmpty && messages.length === 0) {
+    return (
+      <div
+        className={[styles.chat, className].filter(Boolean).join(' ')}
+        style={style}
+        data-juneau="chat"
+      >
+        <div className={styles.start} data-juneau="chat-start">
+          <div className={styles.startColumn}>
+            {emptyState ?? (
+              <AiMessageList
+                messages={messages}
+                isLoading={isLoading}
+                isConnecting={isConnecting}
+                onProposalConfirm={onProposalConfirm}
+                onProposalCancel={onProposalCancel}
+              />
+            )}
+            {errorBanner}
+            {aboveInputSlot}
+            {inputBar}
+            {belowInput != null && (
+              <div className={styles.belowInput} data-juneau="below-input">
+                {belowInput}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={[styles.chat, className].filter(Boolean).join(' ')}
@@ -101,24 +162,11 @@ export function AiChat({
         emptyState={emptyState}
       />
 
-      {error && <AiError message={error} />}
+      {errorBanner}
 
-      {aboveInput != null && (
-        <div className={styles.aboveInput} data-juneau="above-input" data-juneau-above-input="">
-          {aboveInput}
-        </div>
-      )}
+      {aboveInputSlot}
 
-      <AiInput
-        value={input}
-        onChange={onInputChange}
-        onSend={onSend}
-        onStop={onStop}
-        isLoading={isLoading}
-        placeholder={placeholder}
-        actions={actions}
-        sendIcon={sendIcon}
-      />
+      {inputBar}
     </div>
   );
 }

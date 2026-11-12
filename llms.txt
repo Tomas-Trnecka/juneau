@@ -46,6 +46,8 @@ Headless chat body (message list + input + error). Requires explicit props from 
 Use when embedding chat in a custom layout instead of using AiSidebar. Also accepts `renderPart?` and `onEntityClick?`.
 `aboveInput?: ReactNode` renders consumer content between the message list / error and the input, wrapped in `[data-juneau="above-input"][data-juneau-above-input]`. Omitted or null = nothing rendered, no wrapper. AiSidebar forwards the same prop (hidden while minimized).
 
+`AiChat` `centerInputWhenEmpty?: boolean` + `belowInput?: ReactNode`: with no messages, empty state + input + `belowInput` stack centred in `[data-juneau="chat-start"]` (`belowInput` in `[data-juneau="below-input"]`); the first message restores the default layout.
+
 ### renderPart — custom part renderer escape hatch
 `RenderPartFn = (part: AiMessagePart) => ReactNode | null | undefined`
 Called before the built-in renderers for every part. Non-nullish return wins (can override built-ins too); null/undefined falls through. Receives the raw part with no narrowing — consumer owns type assertions:
