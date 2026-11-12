@@ -1043,6 +1043,7 @@ Beyond tokens, key elements carry stable `data-juneau` attributes so you can tar
 | `data-juneau-segment="bubble\|card"` | Bubble / card segment inside a message |
 | `data-juneau="typing-indicator"` | Typing indicator |
 | `data-juneau="above-input"` (also `data-juneau-above-input`) | `aboveInput` slot wrapper in `AiChat` — only rendered when the prop is set |
+| `data-juneau="input-send"` / `data-juneau="input-stop"` | Send button of `AiInput`, and the stop button that replaces it while streaming |
 | `data-juneau="chat-start"` | Scroll container of the centred empty layout in `AiChat` (`centerInputWhenEmpty`, no messages) |
 | `data-juneau="below-input"` | `belowInput` slot wrapper in the centred empty layout |
 | `data-juneau="input"` | `AiInput` wrapper |

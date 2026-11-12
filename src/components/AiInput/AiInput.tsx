@@ -111,6 +111,7 @@ export function AiInput({ value, onChange, onSend, onStop, isLoading, placeholde
             onClick={onStop}
             aria-label={labels.stopMessage}
             type="button"
+            data-juneau="input-stop"
           >
             <svg className={styles.stopIcon} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -124,6 +125,7 @@ export function AiInput({ value, onChange, onSend, onStop, isLoading, placeholde
             disabled={isLoading || !value.trim()}
             aria-label={labels.sendMessage}
             type="button"
+            data-juneau="input-send"
           >
             {isLoading ? (
               <svg className={styles.spinnerIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
