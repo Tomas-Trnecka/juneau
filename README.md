@@ -952,6 +952,8 @@ type AiChatSummary = {
 };
 ```
 
+`AiChatHistoryList` takes `AiChatHistoryItem[]` (`{ id, title, updatedAt?: Date, dateLabel?: string }`), which every `AiChatSummary` satisfies. Pass `dateLabel` to show a date you formatted yourself (your locale, your date library); without it `updatedAt` is formatted in the browser's locale.
+
 `trimChats(chats, limit)` returns the `limit` most recently updated chats (sorted newest first) — delete the rest from your storage to enforce an overall chats limit.
 
 ---

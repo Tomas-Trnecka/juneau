@@ -94,7 +94,7 @@ Renders a confirm/cancel card. Calls onProposalConfirm(id, payload) or onProposa
 If `proposal.resolved` is set (`'confirmed' | 'cancelled' | 'expired'`), buttons are replaced by a status badge and the card dims.
 
 ### AiChatHistoryList
-Renders a list of stored chats. Props: `chats: AiChatSummary[]`, `onSelect(chatId)`, `activeChatId?`, `onDelete?(chatId)`.
+Renders a list of stored chats. Props: `chats: AiChatHistoryItem[]` (`{ id, title, updatedAt?: Date, dateLabel?: string }`; `dateLabel` is shown as given, else `updatedAt` in the browser locale; every `AiChatSummary` fits), `onSelect(chatId)`, `activeChatId?`, `onDelete?(chatId)`.
 `AiChatSummary = { id, title, createdAt: Date, updatedAt: Date }`. Consumer owns storage and selection.
 
 ### AiTypingIndicator

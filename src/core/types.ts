@@ -178,6 +178,17 @@ export type AiChatSummary = {
 };
 
 /**
+ * One row of `AiChatHistoryList`. `dateLabel` is shown as given, e.g. formatted by the consumer
+ * in its own locale; without it `updatedAt` is formatted in the browser's locale.
+ */
+export type AiChatHistoryItem = {
+  id: string;
+  title: string;
+  updatedAt?: Date;
+  dateLabel?: string;
+};
+
+/**
  * JSON-safe form of {@link AiMessage} — dates as ISO strings.
  * `v` is the persistence format version; missing means v1 (pre-versioned).
  */

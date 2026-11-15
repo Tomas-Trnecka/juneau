@@ -10,6 +10,7 @@ export type {
   AiProposal,
   AiProposalResolution,
   AiChatSummary,
+  AiChatHistoryItem,
   AiSerializedMessage,
   AiActivityPart as AiActivityPartType,
   AiActivityStatus,

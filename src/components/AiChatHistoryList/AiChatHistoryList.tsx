@@ -1,10 +1,10 @@
-import type { AiChatSummary } from '../../core/types';
+import type { AiChatHistoryItem } from '../../core/types';
 import { useLabels } from '../../i18n/context';
 import styles from './AiChatHistoryList.module.css';
 
 type Props = {
   /** Stored chats to display — most recently updated first is recommended (see `trimChats`) */
-  chats: AiChatSummary[];
+  chats: AiChatHistoryItem[];
   /** Called with the chat id when the user picks a chat */
   onSelect: (chatId: string) => void;
   /** Highlights the currently open chat, if any */
@@ -30,7 +30,7 @@ export function AiChatHistoryList({ chats, onSelect, activeChatId, onDelete }: P
           >
             <span className={styles.title}>{chat.title}</span>
             <span className={styles.date}>
-              {chat.updatedAt.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+              {chat.dateLabel ?? chat.updatedAt?.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
             </span>
           </button>
           {onDelete && (

@@ -253,7 +253,7 @@ Helpers in `core/history.ts`:
 | `trimHistory(messages, limit)` | Keeps the most recent `limit` messages; never starts on an assistant turn |
 | `trimChats(chats, limit)` | Returns the `limit` most recently updated `AiChatSummary[]`, newest first |
 
-`AiChatHistoryList` renders `AiChatSummary[]` (`{ id, title, createdAt, updatedAt }`) with select/delete; the consumer owns the chat list and per-chat storage. Multi-chat switching = `reset(loadMessagesFor(chatId))`.
+`AiChatHistoryList` renders `AiChatHistoryItem[]` (`{ id, title, updatedAt?, dateLabel? }`; an `AiChatSummary` fits, `dateLabel` wins over formatting `updatedAt`) with select/delete; the consumer owns the chat list and per-chat storage. Multi-chat switching = `reset(loadMessagesFor(chatId))`.
 
 ---
 
