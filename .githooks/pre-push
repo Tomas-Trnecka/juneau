@@ -1,0 +1,6 @@
+#!/bin/sh
+# Fast local gate before a push; CI (.github/workflows/ci.yml) is the authoritative one.
+# Enable once per clone: git config core.hooksPath .githooks
+set -e
+npm run --silent typecheck
+npx vitest run --project unit --reporter=dot
