@@ -62,7 +62,7 @@ Juneau ships two factory functions so you don't have to write boilerplate stream
 
 For backends that stream **Server-Sent Events (SSE)** — the format used by OpenAI, Anthropic, and most AI API proxies.
 
-The default parser understands OpenAI's streaming format out of the box (`choices[0].delta.content`).
+The default parser reads [Juneau wire protocol](#juneau-wire-protocol--for-juneau-compatible-backends) events first and falls back to OpenAI's streaming format (`choices[0].delta.content`), so both work out of the box.
 
 ```ts
 import { createSseAdapter } from 'juneau';
@@ -106,7 +106,9 @@ const adapter = createSseAdapter('/api/chat', {
 | `headers` | `Record<string, string>` | `{}` | Static headers, merged with Content-Type |
 | `getHeaders` | `(input) => Record<string, string>` | — | Dynamic headers, called per request. Merged on top of `headers`. |
 | `getBody` | `(input) => unknown` | `{ messages, context }` | Override request body |
-| `parseEvent` | `(data: string) => AiStreamEvent[]` | OpenAI parser | Parse each `data: ...` SSE line into events |
+| `getMessages` | `(messages) => AiMessage[] \| Promise<AiMessage[]>` | — | Transform the history before it is sent — remap roles, filter messages — without writing a custom adapter |
+| `credentials` | `RequestCredentials` | — | Passed to `fetch`. Use `'include'` to send cookies to a cross-origin backend. |
+| `parseEvent` | `(data: string) => AiStreamEvent[]` | Juneau wire, then OpenAI | Parse each `data: ...` SSE line into events |
 
 ---
 
@@ -114,12 +116,12 @@ const adapter = createSseAdapter('/api/chat', {
 
 For backends that stream **newline-delimited JSON (NDJSON)** or plain text — raw chunked HTTP without SSE formatting.
 
-The default parser expects `{ "text": "..." }` or `{ "done": true }` JSON lines.
+The default parser reads each line as a [Juneau wire protocol](#juneau-wire-protocol--for-juneau-compatible-backends) event (`{ "type": "text", "text": "..." }`, `{ "type": "done" }`, …) and treats any other line as plain text. For a different JSON schema, pass `parseChunk`.
 
 ```ts
 import { createFetchStreamAdapter } from 'juneau';
 
-// NDJSON backend (streams { text: "..." } lines):
+// Backend streaming Juneau wire NDJSON — zero config:
 const adapter = createFetchStreamAdapter('/api/chat');
 
 // Plain text — treat every chunk as raw text:
@@ -147,7 +149,8 @@ const adapter = createFetchStreamAdapter('/api/chat', {
 | `headers` | `Record<string, string>` | `{}` | Static headers |
 | `getHeaders` | `(input) => Record<string, string>` | — | Dynamic headers, called per request |
 | `getBody` | `(input) => unknown` | `{ messages, context }` | Override request body |
-| `parseChunk` | `(chunk: string) => AiStreamEvent[]` | NDJSON parser | Parse each newline-delimited chunk into events |
+| `credentials` | `RequestCredentials` | — | Passed to `fetch`. Use `'include'` to send cookies to a cross-origin backend. |
+| `parseChunk` | `(chunk: string) => AiStreamEvent[]` | Juneau wire, then plain text | Parse each newline-delimited chunk into events |
 
 ---
 
@@ -199,6 +202,7 @@ import { z } from 'zod';
 
 const skillSet = createSkillSet({
   search: {
+    id: 1,
     title: 'Record Search',
     description: 'Search for records.',
     instructions: 'Present results concisely. If cards are shown, write one sentence only.',
@@ -412,6 +416,7 @@ import { JuneauProvider, juneauCs } from 'juneau';
 |---|---|---|
 | `theme` | `JuneauTheme` | Override design tokens. Only specified keys are applied. |
 | `labels` | `Partial<JuneauLabels>` | Override UI strings. Omitted keys fall back to English. |
+| `defaultTitle` | `string` | Sidebar title for every `AiSidebar` inside — shorthand for `labels.sidebarTitle`. A `title` prop on `AiSidebar` still wins. |
 | `className` | `string` | Added to the root `<div>`. |
 | `style` | `CSSProperties` | Inline styles on the root `<div>`. |
 
@@ -508,14 +513,21 @@ The sidebar anchors to the bottom-right of the viewport and opens at 60% screen 
 |---|---|---|
 | `title` | `string` | Overrides the `sidebarTitle` label for this instance. |
 | `icon` | `ReactNode` | Override the header + avatar icon. Defaults to a wand icon. |
+| `assistantIcon` | `ReactNode` | Override only the message avatar. Falls back to `icon`. |
 | `actions` | `AiInputAction[]` | Toolbar buttons left of send. Pass `[]` to hide entirely. |
 | `sendIcon` | `ReactNode` | Override the send button icon. |
 | `height` | `string` | Height when open. Any CSS value. Defaults to `'60vh'`. |
 | `className` | `string` | Added to the `<aside>` element. |
 | `style` | `CSSProperties` | Inline styles on the `<aside>`. |
+| `onReset` | `() => void` | When set, the header shows a reset button. It clears the conversation (`reset()` from the provider), then calls this. |
+| `confirmReset` | `() => boolean \| Promise<boolean>` | Asked before the conversation is cleared — resolve `false` to abort (nothing is reset, `onReset` never fires). Use it for a confirm dialog. |
 | `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
 | `onEntityClick` | `(entity, entityType?) => void` | Makes entity cards clickable — e.g. navigate to the record. |
 | `headerActions` | `ReactNode` | Extra controls in the header, left of reset/minimize. Rendered as given — Juneau never interprets them. |
+| `badge` | `ReactNode` | Rendered right of the header title, e.g. an unread badge. Rendered as given. |
+| `minimized` | `boolean` | Controlled collapsed state. Omit to let the sidebar own it. |
+| `onMinimizedChange` | `(minimized: boolean) => void` | Fires whenever the user toggles the collapsed state, controlled or not — e.g. to persist it. |
+| `emptyState` | `ReactNode` | Replaces the default empty-state text while there are no messages. |
 | `aboveInput` | `ReactNode` | Content rendered directly above the input (e.g. a feedback prompt). Forwarded to `AiChat`; hidden while minimized. |
 
 **Header chrome (`headerActions`):**
@@ -553,6 +565,7 @@ function MyPage() {
         messages={chat.messages}
         input={chat.input}
         isLoading={chat.isLoading}
+        isConnecting={chat.isConnecting}
         error={chat.error}
         onInputChange={chat.setInput}
         onSend={chat.sendMessage}
@@ -570,6 +583,7 @@ function MyPage() {
 | `messages` | `AiMessage[]` | Conversation history. |
 | `input` | `string` | Current textarea value. |
 | `isLoading` | `boolean` | Whether a stream is in progress. |
+| `isConnecting` | `boolean` | True from send until the first token — the typing indicator shows the `connectingMessage` label. |
 | `error` | `string \| null` | Last error message, or `null`. |
 | `onInputChange` | `(value: string) => void` | Input change handler. |
 | `onSend` | `() => void` | Send the current input. |
@@ -582,9 +596,11 @@ function MyPage() {
 | `placeholder` | `string` | Input placeholder text. |
 | `renderPart` | `RenderPartFn` | Custom part renderer — see below. |
 | `onEntityClick` | `(entity, entityType?) => void` | Makes entity cards clickable — e.g. navigate to the record. |
+| `emptyState` | `ReactNode` | Replaces the default empty-state text while there are no messages. |
 | `aboveInput` | `ReactNode` | Content rendered between the messages / error banner and the input. See below. |
 | `centerInputWhenEmpty` | `boolean` | While there are no messages, centre the empty state and the input instead of pinning the input to the bottom. See below. |
 | `belowInput` | `ReactNode` | Content below the input in the centred empty layout (e.g. suggestions). Not rendered otherwise. |
+| `className` / `style` | `string` / `CSSProperties` | Applied to the root element. |
 
 **Centred empty layout (`centerInputWhenEmpty`, `belowInput`):**
 
@@ -605,6 +621,26 @@ Renders consumer content — a feedback prompt, a notice, anything — between t
   }
 />
 ```
+
+---
+
+### `<AiChatHeader>`
+
+The header `AiSidebar` uses — icon, title, optional badge, consumer controls, reset and minimize buttons. Use it on top of `AiChat` in a full-page or dashboard layout so it looks the same as the sidebar.
+
+```tsx
+<AiChatHeader title="Assistant" onReset={() => chat.reset()} />
+<AiChat {...chatProps} />
+```
+
+| Prop | Type | Description |
+|---|---|---|
+| `title` | `string` | Defaults to the `sidebarTitle` label. |
+| `icon` | `ReactNode` | Override the header icon. Defaults to a wand icon. |
+| `badge` | `ReactNode` | Rendered right of the title. |
+| `headerActions` | `ReactNode` | Extra controls left of the built-in buttons. |
+| `onReset` | `() => void` | When set, a reset button is shown. |
+| `onMinimize` / `isMinimized` | `() => void` / `boolean` | When `onMinimize` is set, a minimize/expand toggle is shown. |
 
 ---
 
@@ -746,20 +782,12 @@ const adapter = createSseAdapter('/api/chat', {
 
 Cookies are sent automatically by `fetch` to same-origin URLs. Just use `createSseAdapter('/api/chat')` with no headers — the browser attaches the session cookie for you.
 
-For cross-origin backends, add `credentials: 'include'` by writing a custom adapter:
+For cross-origin backends, pass `credentials: 'include'` — both built-in adapters forward it to `fetch`:
 
 ```ts
-const adapter: AiBackendAdapter = {
-  async *sendMessage({ messages }) {
-    const res = await fetch('https://api.example.com/chat', {
-      method: 'POST',
-      credentials: 'include',   // sends cookies cross-origin
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages }),
-    });
-    // …stream response
-  },
-};
+const adapter = createSseAdapter('https://api.example.com/chat', {
+  credentials: 'include',   // sends cookies cross-origin
+});
 ```
 
 **Stop button feedback:**
@@ -781,6 +809,29 @@ Assistant messages are composed of typed **parts**. Text is streamed chunk by ch
 | `proposal` | `{ type: 'part', part: { type: 'proposal', ... } }` | `AiProposalCard` |
 | `activity` | `{ type: 'part', part: { type: 'activity', ... } }` | `AiActivityPart` |
 | `error` | `{ type: 'error', message: string }` or `{ type: 'part', part: { type: 'error', ... } }` | Inline error in bubble |
+| `chart` | `{ type: 'part', part: { type: 'chart', ... } }` | No built-in renderer — schema only, render it via `renderPart` (see below) |
+
+**Chart parts (`AiChartPart`):**
+
+Juneau defines the chart schema so backends and frontends agree on one shape, but ships no chart renderer — use the charting library you already have, through `renderPart`. Values travel as strings so decimal amounts survive the wire losslessly.
+
+```ts
+type AiChartPart = {
+  type: 'chart';
+  kind: 'bar' | 'line' | 'pie';
+  title?: string;
+  series: { label: string; currency?: string; points: { x: string; y: string }[] }[];
+  yFormat?: 'currency' | 'count';   // hint for axis and tooltip formatting
+};
+```
+
+```tsx
+import { isChartPart } from 'juneau';
+
+<AiSidebar renderPart={part => (isChartPart(part) ? <MyChart part={part} /> : null)} />
+```
+
+`isChartPart(part)` narrows an `AiMessagePart` to `AiChartPart`; `isProposalPart(part)` does the same for proposals.
 
 **Emitting an activity from your adapter:**
 
@@ -1039,10 +1090,14 @@ Beyond tokens, key elements carry stable `data-juneau` attributes so you can tar
 | `data-juneau="sidebar"` | `AiSidebar` root `<aside>` |
 | `data-juneau="chat"` | `AiChat` root |
 | `data-juneau="header"` | `AiChatHeader` root |
+| `data-juneau="header-icon"` | Icon in the header |
+| `data-juneau="header-badge"` | `badge` wrapper in the header — only rendered when the prop is set |
+| `data-juneau="header-reset"` / `data-juneau="header-minimize"` | Reset button and minimize/expand toggle in the header |
 | `data-juneau="message-list"` | `AiMessageList` root |
 | `data-juneau="empty-state"` | Default empty state in `AiMessageList` |
 | `data-juneau="message"` + `data-juneau-role="user\|assistant"` | Each message row |
 | `data-juneau-segment="bubble\|card"` | Bubble / card segment inside a message |
+| `data-juneau="assistant-avatar"` | Avatar next to assistant messages |
 | `data-juneau="typing-indicator"` | Typing indicator |
 | `data-juneau="above-input"` (also `data-juneau-above-input`) | `aboveInput` slot wrapper in `AiChat` — only rendered when the prop is set |
 | `data-juneau="input-send"` / `data-juneau="input-stop"` | Send button of `AiInput`, and the stop button that replaces it while streaming |
@@ -1080,8 +1135,13 @@ Pass any `Partial<JuneauLabels>` — omitted keys fall back to English:
 | Key | Default (EN) | Used in |
 |---|---|---|
 | `sidebarTitle` | `AI Assistant` | `AiChatHeader` title |
+| `resetConversation` | `Reset conversation` | `AiChatHeader` reset button |
 | `minimizeSidebar` | `Minimize` | `AiChatHeader` minimize button |
 | `expandSidebar` | `Expand` | `AiChatHeader` expand button (when minimized) |
+| `clearConversation` | `Clear conversation` | Not used by a built-in component at the moment |
+| `userLabel` | `You` | User avatar in `AiMessageBubble` |
+| `typingMessage` | `Assistant is typing` | `AiTypingIndicator` |
+| `connectingMessage` | `Connecting…` | `AiTypingIndicator` before the first token |
 | `inputPlaceholder` | `Ask a question… (Enter to send)` | `AiInput` textarea |
 | `sendMessage` | `Send message` | `AiInput` send button |
 | `stopMessage` | `Stop` | `AiInput` stop button (while streaming) |
@@ -1187,4 +1247,6 @@ MIT
 
 Icons used internally by Juneau are from [Font Awesome Free](https://fontawesome.com) (v6), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). SVG paths are inlined directly — no runtime dependency on the Font Awesome package.
 
-Icons used: `crow`, `paper-plane`, `paperclip`, `bolt`, `plus`, `clock-rotate-left`, `scroll`, `arrow-rotate-left`, `window-minimize`, `window-restore`.
+Icons used: `wand-magic-sparkles`, `paper-plane`, `paperclip`, `bolt`, `plus`, `clock-rotate-left`, `scroll`, `arrow-rotate-left`, `window-minimize`, `window-restore`.
+
+The development-only warning icon (shown on unhandled custom parts) is `exclamation-triangle` from [Heroicons](https://heroicons.com) (MIT).

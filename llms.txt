@@ -13,13 +13,12 @@ Two providers wrap the app:
 ## Providers
 
 ### JuneauProvider
-Props: `theme?: JuneauTheme`, `labels?: Partial<JuneauLabels>`, `className?`, `style?`
+Props: `theme?: JuneauTheme`, `labels?: Partial<JuneauLabels>`, `defaultTitle?` (sidebar title for every AiSidebar inside; an AiSidebar `title` prop still wins), `className?`, `style?`
 Provides CSS token overrides and UI string overrides to all Juneau components in the subtree.
 
 ### AiChatProvider
-Props: `adapter: AiBackendAdapter`, `context?: Record<string, unknown>`, `onProposalConfirm?`, `onProposalCancel?`, `children`
 Holds shared useAiChat state. Wrap once at app/layout root. One provider = one persistent conversation.
-Props: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`, `initialMessages?`, `historyLimit?`, `onMessagesChange?` — the three history props are forwarded to the internal useAiChat.
+Props: `adapter: AiBackendAdapter`, `context?: Record<string, unknown>`, `onProposalConfirm?`, `onProposalCancel?`, `initialMessages?`, `historyLimit?`, `onMessagesChange?`, `children` — the three history props are forwarded to the internal useAiChat.
 
 ## Hooks
 
@@ -27,7 +26,7 @@ Props: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`, `initia
 Returns all useAiChat fields plus `setContext(ctx)`. Must be inside AiChatProvider — throws outside one.
 Use `setContext()` on each page to pass current page, available tools, entity IDs, etc. to the adapter.
 `setContext(obj)` REPLACES the whole context; `setContext(prev => ({ ...prev, key: v }))` merges (updater form).
-Safe escape hatch outside a guaranteed provider: `useContext(AiChatContext)` returns `AiChatContextValue | null` — `AiChatContext` is exported from the main barrel.
+Outside a guaranteed provider use `useAiChatContextSafe()` — returns `AiChatContextValue | null` instead of throwing. `AiChatContext` itself is also exported (`useContext(AiChatContext)` gives the same `null`-able value).
 
 ### useAiChat(options)
 Low-level hook for custom UIs. Options: `adapter`, `context?`, `onProposalConfirm?`, `onProposalCancel?`, `initialMessages?` (restored conversation), `historyLimit?` (max messages sent to adapter per request — token saving, rendering never trimmed), `onMessagesChange?` (fires when conversation settles — stream done, proposal resolved, reset; never per token — use to persist)
@@ -38,12 +37,13 @@ Returns: `messages`, `input`, `setInput`, `sendMessage`, `sendMessageWithText`, 
 
 ### AiSidebar
 Fixed-position overlay panel, bottom-right, reads from AiChatProvider.
-Props: `title?`, `icon?`, `actions?`, `sendIcon?`, `height?` (default: '60vh'), `onReset?`, `renderPart?`, `onEntityClick?`, `aboveInput?`, `className?`, `style?`
+Props: `title?`, `icon?`, `assistantIcon?` (message avatar only; falls back to `icon`), `actions?`, `sendIcon?`, `height?` (default: '60vh'), `onReset?` (shows a reset button; clears the conversation, then calls it), `confirmReset?: () => boolean | Promise<boolean>` (resolve false to abort the reset), `renderPart?`, `onEntityClick?`, `headerActions?: ReactNode`, `badge?: ReactNode`, `minimized?` + `onMinimizedChange?(minimized)` (controlled collapsed state; omit `minimized` to let the sidebar own it), `emptyState?: ReactNode`, `aboveInput?`, `className?`, `style?`
 Has minimize/restore button. Minimized = compact header bar at bottom-right. Animated transition.
 
 ### AiChat
 Headless chat body (message list + input + error). Requires explicit props from useAiChat.
-Use when embedding chat in a custom layout instead of using AiSidebar. Also accepts `renderPart?` and `onEntityClick?`.
+Use when embedding chat in a custom layout instead of using AiSidebar.
+Props: `messages`, `input`, `isLoading`, `isConnecting`, `error`, `onInputChange`, `onSend`, `onStop?`, `onProposalConfirm`, `onProposalCancel`, `onEntityClick?`, `placeholder?`, `assistantIcon?`, `actions?`, `sendIcon?`, `renderPart?`, `emptyState?`, `aboveInput?`, `centerInputWhenEmpty?`, `belowInput?`, `className?`, `style?`.
 `aboveInput?: ReactNode` renders consumer content between the message list / error and the input, wrapped in `[data-juneau="above-input"][data-juneau-above-input]`. Omitted or null = nothing rendered, no wrapper. AiSidebar forwards the same prop (hidden while minimized).
 
 `AiChat` `centerInputWhenEmpty?: boolean` + `belowInput?: ReactNode`: with no messages, empty state + input + `belowInput` stack centred in `[data-juneau="chat-start"]` (`belowInput` in `[data-juneau="below-input"]`); the first message restores the default layout.
@@ -62,23 +62,24 @@ Called before the built-in renderers for every part. Non-nullish return wins (ca
 Threaded down: AiSidebar/AiChat → AiMessageList → AiMessageBubble → AiMessagePartRenderer.
 
 ### AiChatHeader
-Props: `title?`, `icon?`, `onMinimize?`, `isMinimized?`
+The header AiSidebar uses; put it above AiChat in a full-page layout.
+Props: `title?`, `icon?`, `badge?`, `headerActions?`, `onReset?` (shows a reset button), `onMinimize?` + `isMinimized?` (shows a minimize/expand toggle)
 
 ### AiInput
 Props: `value`, `onChange`, `onSend`, `onStop?`, `isLoading`, `placeholder?`, `actions?`, `sendIcon?`
 
 ### AiMessageList
-Props: `messages`, `isLoading`, `isConnecting`, `onProposalConfirm`, `onProposalCancel`, `onEntityClick?`, `assistantIcon?`
+Props: `messages`, `isLoading`, `isConnecting`, `onProposalConfirm`, `onProposalCancel`, `onEntityClick?`, `assistantIcon?`, `renderPart?`, `emptyState?`
 
 ### AiMessageBubble
-Props: `message`, `onProposalConfirm`, `onProposalCancel`, `onEntityClick?`, `assistantIcon?`
+Props: `message`, `onProposalConfirm`, `onProposalCancel`, `onEntityClick?`, `assistantIcon?`, `renderPart?`
 
 ### AiMessagePartRenderer
-Dispatches AiMessagePart to the correct renderer. Part types: text, table, entity, entity-list, proposal, activity, error.
+Dispatches AiMessagePart to the correct renderer. Built-in part types: text, table, entity, entity-list, proposal, activity, error. `chart` has a schema but no built-in renderer.
 
 ### AiActivityPart
 Renders an activity item (running/done/failed). Subtle UI — not a main response, shows AI progress.
-Running state has a pulsing pink dot. Done = green dot. Failed = red dot.
+Running state has a pulsing accent-coloured dot. Done = success colour. Failed = error colour.
 
 ### AiTablePart
 Renders a data table from columns + rows.
@@ -124,11 +125,16 @@ AiMessagePart =
   | { type: 'proposal'; proposal: AiProposal }
   | { type: 'activity'; id?: string; title: string; description?: string; status: 'running' | 'done' | 'failed'; metadata?: Record<string, unknown> }
   | { type: 'error'; message: string }
+  | AiChartPart    // schema only — no built-in renderer, render via renderPart
   | AiCustomPart   // { type: string; [key: string]: unknown } — consumer-defined, rendered via renderPart
 
 AiEntity = { id?: string; title: string; subtitle?: string; fields?: AiEntityField[]; payload?: unknown }
 AiEntityField = { label: string; value: string; badge?: 'success' | 'warning' | 'danger' | 'neutral' }
+AiChartPart = { type: 'chart'; kind: 'bar' | 'line' | 'pie'; title?: string; series: AiChartSeries[]; yFormat?: 'currency' | 'count' }
+AiChartSeries = { label: string; currency?: string; points: { x: string; y: string }[] }   // y is a string so decimals survive the wire
 ```
+
+Type guards: `isChartPart(part)` narrows to `AiChartPart`, `isProposalPart(part)` to `AiProposalPart`.
 
 Custom parts (any `type` string not matching a built-in) flow through the wire protocol and message state untouched. Render them via the `renderPart` prop on `AiSidebar` / `AiChat`. Juneau applies no validation or narrowing — the consumer owns all type assertions. Unhandled custom parts show a dashed warning outline in dev, render nothing in production.
 
@@ -149,7 +155,7 @@ type AiAdapterInput = {
 
 ## Built-in adapters
 
-- `createSseAdapter(url, options?)` — SSE streaming. Default parser understands Juneau wire protocol first, falls back to OpenAI format (`choices[0].delta.content`). Options: `method`, `headers`, `getHeaders`, `getBody`, `credentials`, `parseEvent`.
+- `createSseAdapter(url, options?)` — SSE streaming. Default parser understands Juneau wire protocol first, falls back to OpenAI format (`choices[0].delta.content`). Options: `method`, `headers`, `getHeaders`, `getBody`, `getMessages` (transform the history before sending), `credentials`, `parseEvent`.
 - `createFetchStreamAdapter(url, options?)` — raw chunked HTTP / NDJSON. Default parser understands Juneau wire protocol; falls back to treating unknown chunks as plain text. Options: `method`, `headers`, `getHeaders`, `getBody`, `credentials`, `parseChunk`.
 - `mockAdapter` — dev-only, keyword-triggered scenarios: table, entity, proposal, activity, help, error.
 
@@ -186,7 +192,7 @@ Activity `id` behaviour: same `id` → update in-place (running → done). No `i
 Activity `metadata`: opaque, not rendered by Juneau. Use for internal data (tool name, duration, skill ID).
 
 Exported wire types: `JuneauWireEvent`, `JuneauWireText`, `JuneauWireActivity`, `JuneauWirePart`, `JuneauWireDone`, `JuneauWireError`.
-Shared parser utility: `parseJuneauWire(raw: string): AiStreamEvent[]` — used internally by both adapters, not exported.
+Shared parser utility: `parseJuneauWire(raw: string): AiStreamEvent[]` — the default parser of both adapters, exported for custom `parseEvent` / `parseChunk` functions. Returns `[]` for unrecognised input, never throws.
 
 ## Server utilities — `juneau/server`
 
@@ -255,7 +261,7 @@ for await (const chunk of withSkillDispatch({
 ### withToolRecovery(options) → AsyncIterable\<string\>
 Multi-phase streaming pattern for Gemini 2.5 Flash tool call recovery. Phase 1 streams with tools. If a tool failed and no text was produced, phase 2 calls the model without tools, injecting `failureContext` as an assistant message to force a text response. If the tool succeeded but no text was produced (Gemini treats the tool call as its complete response — confirmed chunk sequence: tool-call → tool-result → finish-step → finish, no text-delta), optional phase 3 receives the full phase 1 message history (resolved from the ai-sdk result's `messages` promise — resolves to ALL turns incl. tool-call + tool-result after the stream is consumed; `response.messages` is fallback only, may miss tool-result turns which Gemini rejects) and calls the model again without tools to summarise the result. Without `phase3`, emits `done` cleanly. Phase 2/3 errors are emitted as wire `error` events, never swallowed. `debug` logs the resolved phase 3 message array and warns when no tool-result turn is present.
 
-Options: `phase1: () => ToolRecoveryStreamResult` (pass the streamText result directly — `fullStream` + `messages`), `phase2: (failureContext) => { fullStream }`, `phase3?: (messages) => { fullStream }`, `skillSet`, `debug?`.
+Options: `phase1: () => ToolRecoveryStreamResult` (pass the streamText result directly — `fullStream` + `messages`), `phase2: (failureContext) => { fullStream }`, `phase3?: (messages) => { fullStream }`, `skillSet`, `onFinish?: ({ text }) => void` (accumulated text across all phases, called once before `done`, never on error paths), `debug?`.
 
 ```ts
 for await (const chunk of withToolRecovery({
@@ -293,12 +299,34 @@ useEffect(() => {
 }, []);
 ```
 
+## Theming
+
+All visual values are CSS custom properties prefixed `--juneau-` (colors, radius, font sizes, font family, transition). Override any subset via `<JuneauProvider theme={{ colorPrimary, colorAccent, radiusLg, fontFamily, … }}>` — keys are the camelCase form of the variable (`--juneau-color-primary` → `colorPrimary`). Overrides are scoped to the provider's subtree. Full key list: README § Theming.
+
+## Labels (i18n)
+
+Every UI string is a key of `JuneauLabels`; pass `labels?: Partial<JuneauLabels>` to `JuneauProvider` (omitted keys fall back to `juneauEn`). Built-in locales: `juneauEn`, `juneauCs`.
+Keys: `sidebarTitle`, `resetConversation`, `clearConversation` (not read by any built-in component), `minimizeSidebar`, `expandSidebar`, `userLabel`, `inputPlaceholder`, `sendMessage`, `stopMessage`, `typingMessage`, `connectingMessage`, `emptyStateText`, `emptyStateHint`, `proposalConfirm`, `proposalCancel`, `proposalConfirmed`, `proposalCancelled`, `proposalExpired`, `errorDismiss`, `actionAddFile`, `actionQuickActions`, `actionNew`, `actionHistory`, `actionRules`, `historyEmpty`, `historyDeleteChat`.
+
+## Styling hooks
+
+Stable `data-juneau` attributes for plain-CSS targeting (hashed CSS Module class names are not public API):
+`sidebar`, `chat`, `header`, `header-icon`, `header-badge`, `header-reset`, `header-minimize`, `message-list`, `empty-state`, `message` (+ `data-juneau-role="user|assistant"`), `assistant-avatar`, `data-juneau-segment="bubble|card"`, `typing-indicator`, `above-input`, `chat-start`, `below-input`, `input`, `input-textarea`, `input-send`, `input-stop`, `error`, `history-list`, `table-part`, `entity-card`, `entity-list-part`, `proposal-card`, `activity-part` (+ `data-status`).
+
 ## Exports
 
-Types: `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiCustomPart`, `AiTextPart`, `AiTablePartType`, `AiProposalPart`, `AiProposal`, `AiActivityPartType`, `AiActivityStatus`, `AiErrorPart`, `AiBackendAdapter`, `AiAdapterInput`, `AiStreamEvent`, `AiStreamTextEvent`, `AiStreamPartEvent`, `AiStreamDoneEvent`, `AiStreamErrorEvent`, `JuneauWireEvent`, `JuneauWireText`, `JuneauWireActivity`, `JuneauWirePart`, `JuneauWireDone`, `JuneauWireError`, `JuneauTheme`, `JuneauLabels`, `AiInputAction`, `RenderPartFn`, `UseAiChatOptions`, `UseAiChatReturn`, `AiChatContextValue`
+Main entry (`juneau`):
 
-Components now exported: `AiSidebar`, `AiChat`, `AiMessageList`, `AiMessageBubble`, `AiInput`, `AiTypingIndicator`, `AiError`, `AiMessagePartRenderer`, `AiTablePart`, `AiProposalCard`, `AiActivityPart`
+Components: `AiSidebar`, `AiChat`, `AiChatHeader`, `AiMessageList`, `AiMessageBubble`, `AiInput`, `AiTypingIndicator`, `AiError`, `AiChatHistoryList`, `AiMessagePartRenderer`, `AiTablePart`, `AiProposalCard`, `AiActivityPart`, `AiEntityCard`, `AiEntityListPart`
 
-Utilities: `consumeStream`, `delay`, `getMessageText`
+Providers and hooks: `JuneauProvider`, `AiChatProvider`, `AiChatContext`, `useAiChatContext`, `useAiChatContextSafe`, `useAiChat`
+
+Adapters: `createSseAdapter`, `createFetchStreamAdapter`, `mockAdapter`, `parseJuneauWire`
+
+Utilities: `consumeStream`, `delay`, `getMessageText`, `serializeMessages`, `serializeForStorage`, `deserializeMessages`, `trimHistory`, `trimChats`, `isProposalPart`, `isChartPart`
 
 Locales: `juneauEn`, `juneauCs`
+
+Types: `AiMessage`, `AiMessageRole`, `AiMessagePart`, `AiCustomPart`, `AiTextPart`, `AiTablePartType`, `AiProposalPart`, `AiProposal`, `AiProposalResolution`, `AiActivityPartType`, `AiActivityStatus`, `AiErrorPart`, `AiEntity`, `AiEntityField`, `AiEntityBadgeTone`, `AiEntityPartType`, `AiEntityListPartType`, `AiChartPart`, `AiChartSeries`, `AiChartPoint`, `AiChartValueFormat`, `AiChatSummary`, `AiChatHistoryItem`, `AiSerializedMessage`, `AiBackendAdapter`, `AiAdapterInput`, `AiStreamEvent`, `AiStreamTextEvent`, `AiStreamPartEvent`, `AiStreamDoneEvent`, `AiStreamErrorEvent`, `JuneauWireEvent`, `JuneauWireText`, `JuneauWireActivity`, `JuneauWirePart`, `JuneauWireDone`, `JuneauWireError`, `SseAdapterOptions`, `SseEventParser`, `FetchStreamAdapterOptions`, `FetchChunkParser`, `UseAiChatOptions`, `UseAiChatReturn`, `AiChatContextValue`, `JuneauTheme`, `JuneauLabels`, `AiInputAction`, `RenderPartFn`
+
+Server entry (`juneau/server`): `toSdkMessages`, `createSkillSet`, `buildSkillIndex`, `selectSkills`, `selectSkillsById`, `streamToWire`, `withToolRecovery`, `withSkillDispatch`; types `SkillSet`, `SkillDefinition`, `SkillExecuteContext`, `SkillSetOptions`, `ToolRecoveryOptions`, `ToolRecoveryStreamResult`, `SkillDispatchOptions`, `StreamToWireOptions`, `CoreMessage`, plus the shared message and wire types.
